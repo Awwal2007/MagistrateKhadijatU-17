@@ -1,0 +1,260 @@
+import React, { useState } from "react";
+import { Camera, Upload, AlertCircle, X, HelpCircle } from "lucide-react";
+import { CameraCapture } from "./CameraCapture.js";
+
+interface PlayerFormProps {
+  onAdd: (player: {
+    name: string;
+    age: number;
+    position: "Goalkeeper" | "Defender" | "Midfielder" | "Forward";
+    category: "Under-17" | "Free Age";
+    photo: string;
+  }) => void;
+  onClose: () => void;
+  currentU17Count: number;
+  currentFreeAgeCount: number;
+}
+
+export const PlayerForm: React.FC<PlayerFormProps> = ({
+  onAdd,
+  onClose,
+  currentU17Count,
+  currentFreeAgeCount,
+}) => {
+  const [name, setName] = useState("");
+  const [age, setAge] = useState<number | "">("");
+  const [position, setPosition] = useState<"Goalkeeper" | "Defender" | "Midfielder" | "Forward">("Goalkeeper");
+  const [photo, setPhoto] = useState<string>("");
+  const [showCamera, setShowCamera] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Auto category determination helper
+  const parsedAge = typeof age === "number" ? age : 0;
+  const category: "Under-17" | "Free Age" = parsedAge > 0 && parsedAge <= 17 ? "Under-17" : "Free Age";
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setError("File size exceeds 5MB limit. Please upload a smaller image.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhoto(reader.result as string);
+        setError(null);
+      };
+      reader.onerror = () => {
+        setError("Error reading file.");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCameraCapture = (base64: string) => {
+    setPhoto(base64);
+    setShowCamera(false);
+    setError(null);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!name.trim()) {
+      setError("Please key in the player's full name.");
+      return;
+    }
+    if (parsedAge <= 0 || parsedAge > 99) {
+      setError("Please supply a valid age (1-99).");
+      return;
+    }
+    if (!photo) {
+      setError("A passport photo is required to build athlete registration card.");
+      return;
+    }
+
+    // Enforce client-side quota constraints
+    if (category === "Under-17" && currentU17Count >= 21) {
+      setError(`Cannot add Under-17 player. The tournament limit of 21 Under-17 players has been reached.`);
+      return;
+    }
+    if (category === "Free Age" && currentFreeAgeCount >= 4) {
+      setError(`Cannot add Free Age player. The tournament limit of 4 Free Age players has been reached.`);
+      return;
+    }
+
+    onAdd({
+      name: name.trim(),
+      age: parsedAge,
+      position,
+      category,
+      photo,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/80 p-4 overflow-y-auto backdrop-blur-xs animate-fade-in">
+      <div className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl border border-slate-100 my-8">
+        
+        {/* MODAL HEADER */}
+        <div className="flex items-center justify-between border-b border-slate-100 bg-[#0a3d0a] px-5 py-4 text-[#FFD700]">
+          <div className="flex items-center gap-2">
+            <h3 className="font-bebas text-xl tracking-wider select-none">ADD TOURNAMENT ATHLETE</h3>
+          </div>
+          <button 
+            type="button" 
+            onClick={onClose}
+            className="rounded-full p-1 text-[#FFD700]/70 hover:bg-white/10 hover:text-white transition"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* COMPONENT FORM */}
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {error && (
+            <div className="flex items-start gap-2.5 rounded-xl bg-red-50 p-3.5 text-xs text-red-700 border border-red-200/50">
+              <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+              <div>
+                <span className="font-semibold block">Roster Registration Blocked</span>
+                {error}
+              </div>
+            </div>
+          )}
+
+          {/* Player Name */}
+          <div>
+            <label className="text-xs font-bold text-[#0a3d0a]/80 uppercase tracking-wider block mb-1.5">Player Full Name</label>
+            <input 
+              type="text"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Samuel Chukwueze"
+              className="w-full text-sm py-2.5 px-3.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0a3d0a] focus:ring-1 focus:ring-[#0a3d0a] transition bg-slate-50/50"
+            />
+          </div>
+
+          {/* Age & Position */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-[#0a3d0a]/80 uppercase tracking-wider block mb-1.5">Age (Years)</label>
+              <input 
+                type="number"
+                required
+                min={1}
+                max={99}
+                value={age}
+                onChange={(e) => {
+                  const val = e.target.value === "" ? "" : parseInt(e.target.value, 10);
+                  setAge(val);
+                }}
+                placeholder="e.g. 16"
+                className="w-full text-sm py-2.5 px-3.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0a3d0a] focus:ring-1 focus:ring-[#0a3d0a] transition bg-slate-50/50"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-[#0a3d0a]/80 uppercase tracking-wider block mb-1.5">Field Position</label>
+              <select 
+                value={position}
+                onChange={(e) => setPosition(e.target.value as any)}
+                className="w-full text-sm py-2.5 px-3.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0a3d0a] focus:ring-1 focus:ring-[#0a3d0a] transition bg-white"
+              >
+                <option value="Goalkeeper">Goalkeeper</option>
+                <option value="Defender">Defender</option>
+                <option value="Midfielder">Midfielder</option>
+                <option value="Forward">Forward</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Auto Determined Category */}
+          {parsedAge > 0 && (
+            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 flex justify-between items-center text-xs">
+              <span className="text-slate-600 font-medium">Determined Competitor Group:</span>
+              <div className="flex items-center gap-1.5">
+                <span className={`font-bold px-2.5 py-1 rounded-md text-white uppercase ${category === "Under-17" ? 'bg-emerald-600' : 'bg-amber-600'}`}>
+                  {category}
+                </span>
+                <span className="text-[10px] text-gray-400 font-semibold">
+                  ({category === "Under-17" ? `Quota: ${currentU17Count}/21` : `Quota: ${currentFreeAgeCount}/4`})
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Photo upload options */}
+          <div>
+            <label className="text-xs font-bold text-[#0a3d0a]/80 uppercase tracking-wider block mb-2">Passport Photo Identification</label>
+            <div className="grid grid-cols-2 gap-3.5">
+              <button
+                type="button"
+                onClick={() => setShowCamera(true)}
+                className="py-6 border border-dashed border-[#0a3d0a]/30 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-green-50/45 hover:border-[#0a3d0a]/70 transition-all text-slate-700 bg-slate-50/30 font-semibold text-xs"
+              >
+                <Camera className="h-6 w-6 text-[#0a3d0a]" />
+                Shoot with Web-Cam
+              </button>
+
+              <label className="py-6 border border-dashed border-slate-300 rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-slate-50 hover:border-slate-400 transition-all cursor-pointer text-slate-700 bg-slate-50/30 font-semibold text-xs">
+                <Upload className="h-6 w-6 text-slate-400" />
+                Upload Device Image
+                <input 
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+
+            {/* Picture Uploaded / Captured Preview */}
+            {photo && (
+              <div className="mt-4 p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-3 animate-fade-in">
+                <img 
+                  src={photo} 
+                  alt="Roster Draft Preview" 
+                  className="w-14 h-14 object-cover rounded-lg border border-[#FFD700] bg-white text-xs text-center" 
+                />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs font-bold text-slate-700 block truncate">passport-identification.jpg</span>
+                  <span className="text-[10px] text-[#0a3d0a] font-semibold flex items-center gap-0.5">
+                    ● Image loaded successfully
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPhoto("")}
+                  className="p-1 text-slate-400 hover:text-red-500 rounded-full hover:bg-slate-200 transition"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* ACTION BUTTON */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              className="w-full py-3 bg-[#0a3d0a] hover:bg-[#072a07] text-[#FFD700] hover:brightness-110 text-sm font-bold tracking-wider rounded-xl transition shadow uppercase"
+            >
+              Add Player to Roster Code
+            </button>
+          </div>
+        </form>
+
+        {/* Snap Web Camera Portal */}
+        {showCamera && (
+          <CameraCapture 
+            onCapture={handleCameraCapture} 
+            onClose={() => setShowCamera(false)} 
+          />
+        )}
+
+      </div>
+    </div>
+  );
+};

@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-bebas: "Bebas Neue", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@utility gold-gradient {
+  background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%);
+}
+
+@utility green-mesh {
+  background-color: #0a3d0a;
+  background-image: radial-gradient(circle at 2px 2px, rgba(255,215,0,0.05) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+@utility id-card-shadow {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    width: 6.2px;
+    height: 6.2px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #0a3d0a;
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  /* Hide print headers/footers and force size constraints */
+  @media print {
+    body {
+      background-color: white !important;
+      color: black !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    
+    .no-print {
+      display: none !important;
+    }
+    
+    .print-grid {
+      display: grid !important;
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 12px !important;
+      padding: 10px !important;
+    }
+
+    .print-card-container {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+  }
+}
