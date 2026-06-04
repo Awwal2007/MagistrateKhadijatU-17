@@ -52,7 +52,7 @@ export const PreviewPage: React.FC = () => {
 
     try {
       // 1. Register Team account first
-      const registerRes = await fetch("/api/auth/register", {
+      const registerRes = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -78,9 +78,9 @@ export const PreviewPage: React.FC = () => {
       // 2. Cascade upload drafted players
       for (let i = 0; i < draftPlayers.length; i++) {
         const p = draftPlayers[i];
-        setSubmissionProgress(`Registering athlete cards (${i + 1}/${draftPlayers.length}): ${p.name}...`);
+        setSubmissionProgress(`Registering player cards (${i + 1}/${draftPlayers.length}): ${p.name}...`);
         
-        const playerRes = await fetch(`/api/teams/${teamId}/players`, {
+        const playerRes = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/teams/${teamId}/players`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -96,7 +96,7 @@ export const PreviewPage: React.FC = () => {
 
         if (!playerRes.ok) {
           const pErr = await playerRes.json();
-          throw new Error(`Athlete allocation failed at [${p.name}]: ${pErr.message || "Unknown schema refusal"}`);
+          throw new Error(`Player allocation failed at [${p.name}]: ${pErr.message || "Unknown schema refusal"}`);
         }
       }
 
@@ -105,7 +105,7 @@ export const PreviewPage: React.FC = () => {
         const o = draftOfficials[j];
         setSubmissionProgress(`Validating staff credentials (${j + 1}/${draftOfficials.length}): ${o.name}...`);
 
-        const officialRes = await fetch(`/api/teams/${teamId}/officials`, {
+        const officialRes = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/teams/${teamId}/officials`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -304,7 +304,7 @@ export const PreviewPage: React.FC = () => {
         {/* PLAYERS CARD LISTING IN SPORTS SHAPE  */}
         <div className="space-y-4">
           <div className="border-b border-slate-200 pb-2">
-            <h3 className="font-bebas text-2xl text-[#0a3d0a] tracking-wider uppercase">Active Athletes Roster ({draftPlayers.length})</h3>
+            <h3 className="font-bebas text-2xl text-[#0a3d0a] tracking-wider uppercase">Active Players Roster ({draftPlayers.length})</h3>
             <p className="text-xs text-slate-400 font-medium">Render preview layout of legal competition player cards</p>
           </div>
 

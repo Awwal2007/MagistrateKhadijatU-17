@@ -43,7 +43,7 @@ export const AdminPage: React.FC = () => {
     setIsVerifying(true);
 
     try {
-      const response = await fetch("/api/auth/admin-login", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/auth/admin-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: passwordInput })
@@ -69,7 +69,7 @@ export const AdminPage: React.FC = () => {
     setLoadingRecords(true);
     setErrorOnRecords(null);
     try {
-      const response = await fetch("/api/admin/teams", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/teams`, {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
@@ -108,7 +108,7 @@ export const AdminPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/players/${playerId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/players/${playerId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${authToken}`
@@ -133,7 +133,7 @@ export const AdminPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/admin/teams/${teamId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/teams/${teamId}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${authToken}`
@@ -212,9 +212,6 @@ export const AdminPage: React.FC = () => {
                     className="w-full text-xs py-2.5 pl-9 pr-3.5 border border-emerald-800/30 rounded-xl focus:outline-none focus:border-[#FFD700] focus:ring-1 focus:ring-[#FFD700] bg-slate-950 text-white placeholder-slate-600 font-sans"
                   />
                 </div>
-                <span className="text-[9px] text-[#FFD700]/70 font-semibold block mt-1.5 italic">
-                  Note: Default development sandbox password key is &quot;admin123&quot;.
-                </span>
               </div>
 
               <button
@@ -416,7 +413,7 @@ export const AdminPage: React.FC = () => {
                 {/* PLAYERS CARD LIST WITH DELETE TRIGGERS */}
                 <div className="space-y-4">
                   <div className="border-b border-slate-205 pb-2">
-                    <h3 className="font-bebas text-2xl text-[#0a3d0a] tracking-wider uppercase">Active Athletes Roster ({selectedTeam.players.length})</h3>
+                    <h3 className="font-bebas text-2xl text-[#0a3d0a] tracking-wider uppercase">Active Players Roster ({selectedTeam.players.length})</h3>
                     <p className="text-xs text-slate-400 font-medium font-sans">Preview legal photo cards. Individual delete controls wipe items from server database.</p>
                   </div>
 
@@ -436,27 +433,18 @@ export const AdminPage: React.FC = () => {
                           {/* Admin controls panel overlay */}
                           <div className="absolute top-2 right-2 flex gap-1 bg-white/95 rounded-md p-1 shadow border border-slate-200 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
                             <button
-                              onClick={() => {
-                                const styleNode = document.createElement("style");
-                                styleNode.innerHTML = `
-                                  @media print {
-                                    body * { display: none !important; }
-                                    #print-single-box, #print-single-box * { display: flex !important; }
-                                    #print-single-box { position: absolute !important; top: 0 !important; left: 0 !important; }
-                                  }
-                                `;
-                                const container = document.createElement("div");
-                                container.id = "print-single-box";
-                                container.className = "fixed inset-0 bg-white flex items-center justify-center pointer-events-none z-50 py-10";
-                                document.body.appendChild(container);
-                                document.head.appendChild(styleNode);
-                                
+                              onClick={(e) => {
+                                const cardEl = (e.currentTarget.closest('.group\\/card') as HTMLElement)?.querySelector('.print-card-container');
+                                if (!cardEl) return;
+                                const clone = cardEl.cloneNode(true) as HTMLElement;
+                                const target = document.createElement('div');
+                                target.id = 'print-single-target';
+                                target.appendChild(clone);
+                                document.body.appendChild(target);
+                                document.body.classList.add('print-single');
                                 window.print();
-                                
-                                setTimeout(() => {
-                                  document.body.removeChild(container);
-                                  document.head.removeChild(styleNode);
-                                }, 500);
+                                document.body.classList.remove('print-single');
+                                document.body.removeChild(target);
                               }}
                               className="p-1 text-[#0a3d0a] hover:bg-green-50 rounded"
                               title="Print Card"
@@ -499,27 +487,18 @@ export const AdminPage: React.FC = () => {
                           />
                           <div className="absolute top-2 right-2 flex gap-1 bg-white/95 rounded-md p-1 shadow border border-slate-200 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
                             <button
-                              onClick={() => {
-                                const styleNode = document.createElement("style");
-                                styleNode.innerHTML = `
-                                  @media print {
-                                    body * { display: none !important; }
-                                    #print-single-box, #print-single-box * { display: flex !important; }
-                                    #print-single-box { position: absolute !important; top: 0 !important; left: 0 !important; }
-                                  }
-                                `;
-                                const container = document.createElement("div");
-                                container.id = "print-single-box";
-                                container.className = "fixed inset-0 bg-white flex items-center justify-center pointer-events-none z-50 py-10";
-                                document.body.appendChild(container);
-                                document.head.appendChild(styleNode);
-                                
+                              onClick={(e) => {
+                                const cardEl = (e.currentTarget.closest('.group\\/card') as HTMLElement)?.querySelector('.print-card-container');
+                                if (!cardEl) return;
+                                const clone = cardEl.cloneNode(true) as HTMLElement;
+                                const target = document.createElement('div');
+                                target.id = 'print-single-target';
+                                target.appendChild(clone);
+                                document.body.appendChild(target);
+                                document.body.classList.add('print-single');
                                 window.print();
-                                
-                                setTimeout(() => {
-                                  document.body.removeChild(container);
-                                  document.head.removeChild(styleNode);
-                                }, 500);
+                                document.body.classList.remove('print-single');
+                                document.body.removeChild(target);
                               }}
                               className="p-1 text-emerald-700 hover:bg-green-50 rounded"
                               title="Print Official"

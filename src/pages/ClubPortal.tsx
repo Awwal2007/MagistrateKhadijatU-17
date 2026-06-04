@@ -5,6 +5,7 @@ import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
 import { PlayerForm } from "../components/PlayerForm.js";
 import { OfficialForm } from "../components/OfficialForm.js";
+import tournamentLogo from "../assets/logo.jpeg";
 
 export const ClubPortal: React.FC = () => {
   const navigate = useNavigate();
@@ -62,7 +63,7 @@ export const ClubPortal: React.FC = () => {
   }) => {
     setActionError(null);
     try {
-      const response = await fetch(`/api/teams/${currentTeam?.id}/players`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/teams/${currentTeam?.id}/players`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -90,7 +91,7 @@ export const ClubPortal: React.FC = () => {
   }) => {
     setActionError(null);
     try {
-      const response = await fetch(`/api/teams/${currentTeam?.id}/officials`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/teams/${currentTeam?.id}/officials`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -131,7 +132,7 @@ export const ClubPortal: React.FC = () => {
       <nav className="green-mesh border-b-4 border-[#FFD700] text-white py-4 px-4 sticky top-0 z-30 shadow-md no-print">
         <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-lg">⚽</span>
+            <img src={tournamentLogo} alt="MKO U17" className="h-8 w-8 rounded-full border border-[#FFD700] bg-white object-cover shadow-sm" />
             <div>
               <h1 className="font-bebas text-lg tracking-wider text-[#FFD700] leading-none uppercase">
                 MKO U-17 CUP PORTAL
@@ -248,7 +249,7 @@ export const ClubPortal: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-slate-200 pb-2">
             <div>
-              <h3 className="font-bebas text-2xl text-[#0a3d0a] tracking-wider uppercase">ATHLETES ID CREDENTIALS</h3>
+              <h3 className="font-bebas text-2xl text-[#0a3d0a] tracking-wider uppercase">PLAYERS ID CREDENTIALS</h3>
               <p className="text-xs text-slate-400">Manage, preview, and output passport sports credentials</p>
             </div>
             {totalPlayers < 25 && (
@@ -273,40 +274,31 @@ export const ClubPortal: React.FC = () => {
               </button>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
+          <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
               {rosterPlayers.map((player) => (
                 <div key={player._id} className="relative group/card">
-                  <PrintCard 
-                    person={player} 
-                    type="player" 
-                    team={currentTeam} 
-                  />
+                  <div ref={(el) => { if (el) el.dataset.cardRef = "true"; }}>
+                    <PrintCard 
+                      person={player} 
+                      type="player" 
+                      team={currentTeam} 
+                    />
+                  </div>
                   {/* Individual Print Button Overlay */}
                   <div className="absolute top-2 right-2 flex gap-1 bg-white/95 rounded-md p-1 shadow border border-slate-200 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
                     <button
-                      onClick={() => {
-                        const styleNode = document.createElement("style");
-                        styleNode.innerHTML = `
-                          @media print {
-                            body * { display: none !important; }
-                            #print-single-box, #print-single-box * { display: flex !important; }
-                            #print-single-box { position: absolute !important; top: 0 !important; left: 0 !important; }
-                          }
-                        `;
-                        const container = document.createElement("div");
-                        container.id = "print-single-box";
-                        container.className = "fixed inset-0 bg-white flex items-center justify-center pointer-events-none z-50 py-10";
-                        document.body.appendChild(container);
-                        document.head.appendChild(styleNode);
-                        
-                        // Instantiate print dialog
+                      onClick={(e) => {
+                        const cardEl = (e.currentTarget.closest('.group\\/card') as HTMLElement)?.querySelector('.print-card-container');
+                        if (!cardEl) return;
+                        const clone = cardEl.cloneNode(true) as HTMLElement;
+                        const target = document.createElement('div');
+                        target.id = 'print-single-target';
+                        target.appendChild(clone);
+                        document.body.appendChild(target);
+                        document.body.classList.add('print-single');
                         window.print();
-                        
-                        // Clean up
-                        setTimeout(() => {
-                          document.body.removeChild(container);
-                          document.head.removeChild(styleNode);
-                        }, 500);
+                        document.body.classList.remove('print-single');
+                        document.body.removeChild(target);
                       }}
                       className="p-1 text-emerald-700 hover:bg-emerald-50 rounded"
                       title="Print This Card Only"
@@ -343,7 +335,7 @@ export const ClubPortal: React.FC = () => {
               <p className="text-xs font-semibold text-slate-700 mt-2">No Verified Officials Registered</p>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
+          <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
               {rosterOfficials.map((official) => (
                 <div key={official._id} className="relative group/card">
                   <PrintCard 
@@ -354,27 +346,18 @@ export const ClubPortal: React.FC = () => {
                   {/* Individual Print Trigger Overlay */}
                   <div className="absolute top-2 right-2 flex gap-1 bg-white/95 rounded-md p-1 shadow border border-slate-200 opacity-0 group-hover/card:opacity-100 transition-opacity z-10">
                     <button
-                      onClick={() => {
-                        const styleNode = document.createElement("style");
-                        styleNode.innerHTML = `
-                          @media print {
-                            body * { display: none !important; }
-                            #print-single-box, #print-single-box * { display: flex !important; }
-                            #print-single-box { position: absolute !important; top: 0 !important; left: 0 !important; }
-                          }
-                        `;
-                        const container = document.createElement("div");
-                        container.id = "print-single-box";
-                        container.className = "fixed inset-0 bg-white flex items-center justify-center pointer-events-none z-50 py-10";
-                        document.body.appendChild(container);
-                        document.head.appendChild(styleNode);
-                        
+                      onClick={(e) => {
+                        const cardEl = (e.currentTarget.closest('.group\\/card') as HTMLElement)?.querySelector('.print-card-container');
+                        if (!cardEl) return;
+                        const clone = cardEl.cloneNode(true) as HTMLElement;
+                        const target = document.createElement('div');
+                        target.id = 'print-single-target';
+                        target.appendChild(clone);
+                        document.body.appendChild(target);
+                        document.body.classList.add('print-single');
                         window.print();
-                        
-                        setTimeout(() => {
-                          document.body.removeChild(container);
-                          document.head.removeChild(styleNode);
-                        }, 500);
+                        document.body.classList.remove('print-single');
+                        document.body.removeChild(target);
                       }}
                       className="p-1 text-amber-700 hover:bg-amber-50 rounded"
                       title="Print Official Badge Only"

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { LogIn, ArrowLeft, AlertCircle, ShieldAlert } from "lucide-react";
 import { useRegistration } from "../context/RegistrationContext.js";
+import tournamentLogo from "../assets/logo.jpeg";
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/login", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password })
@@ -56,6 +57,7 @@ export const LoginPage: React.FC = () => {
           <ArrowLeft className="h-3.5 w-3.5" />
           Back to Registration
         </Link>
+        <img src={tournamentLogo} alt="Magistrate Khadijat Oloyade U17 Logo" className="mx-auto h-20 w-20 object-contain rounded-full shadow-md border-2 border-[#0a3d0a] mb-3 bg-white" />
         <span className="font-bebas text-[#0a3d0a] text-center block text-sm tracking-widest font-bold">OFFICIAL TOURNAMENT ENTRY</span>
         <h2 className="mt-2 text-center font-bebas text-3xl sm:text-4xl tracking-wider text-[#0a3d0a] uppercase">
           CLUB ACCESS TERMINAL

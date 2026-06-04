@@ -38,13 +38,15 @@
 @layer utilities {
   /* Hide print headers/footers and force size constraints */
   @media print {
+    *, *::before, *::after {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
     body {
       background-color: white !important;
       color: black !important;
       margin: 0 !important;
-      padding: 0 !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
+      padding: 8mm !important;
     }
     
     .no-print {
@@ -52,15 +54,53 @@
     }
     
     .print-grid {
-      display: grid !important;
-      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-      gap: 12px !important;
-      padding: 10px !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 6mm !important;
+      padding: 0 !important;
+      align-items: flex-start !important;
+      align-content: flex-start !important;
     }
 
-    .print-card-container {
+    .print-grid > div {
+      flex: 0 0 auto !important;
+      width: 85mm !important;
+      height: 54mm !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
+
+    .print-card-container {
+      width: 85mm !important;
+      height: 54mm !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    /* Individual card print mode */
+    body.print-single > *:not(#print-single-target) {
+      display: none !important;
+    }
+    body.print-single #print-single-target {
+      position: fixed !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: white !important;
+    }
+    
+    /* Ensure all PrintCards enforce their flex layouts properly in print */
+    .print-card-container {
+      display: flex !important;
+      transform: none !important; /* override scale-95 on print */
+    }
   }
 }
+

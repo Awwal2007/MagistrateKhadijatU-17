@@ -4,6 +4,7 @@ import { Users, UserCheck, Shield, Upload, Trash2, ArrowRight, LogIn } from "luc
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PlayerForm } from "../components/PlayerForm.js";
 import { OfficialForm } from "../components/OfficialForm.js";
+import tournamentLogo from "../assets/logo.jpeg";
 
 export const RegistrationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -90,7 +91,8 @@ export const RegistrationPage: React.FC = () => {
       {/* HERO REGISTRANT BANNER */}
       <div className="green-mesh border-b-4 border-[#FFD700] text-white py-12 px-4 shadow-md text-center relative overflow-hidden animate-fade-in">
         <div className="absolute inset-0 bg-black/10" />
-        <div className="max-w-4xl mx-auto relative z-10 space-y-3">
+        <div className="max-w-4xl mx-auto relative z-10 space-y-3 flex flex-col items-center">
+          <img src={tournamentLogo} alt="Magistrate Khadijat Oloyade U17 Logo" className="h-24 w-24 object-contain rounded-full shadow-lg border-2 border-[#FFD700] mb-2 bg-white" />
           <span className="font-bebas text-xs sm:text-base tracking-widest text-[#FFD700] bg-white/10 px-3.5 py-1 rounded-full uppercase border border-white/5">
             Official Portal
           </span>
@@ -99,7 +101,7 @@ export const RegistrationPage: React.FC = () => {
             <span className="text-[#FFD700]">Under 17 Football Competition</span>
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-200 uppercase tracking-wider max-w-2xl mx-auto leading-relaxed">
-            Register your sports club, details for your 25 athletes (supporting 21 Under-17 &amp; 4 Free Age limits), and manage up to 4 support officials.
+            Register your sports club, details for your 25 players (supporting 21 Under-17 &amp; 4 Free Age limits), and manage up to 4 support officials.
           </p>
         </div>
       </div>
@@ -265,7 +267,7 @@ export const RegistrationPage: React.FC = () => {
                     </div>
                     <span className="text-gray-300">|</span>
                     <div>
-                      Total Athletes: <span className="text-[#0a3d0a] font-extrabold text-xs">{totalPlayers} / 25</span>
+                      Total Players: <span className="text-[#0a3d0a] font-extrabold text-xs">{totalPlayers} / 25</span>
                     </div>
                   </div>
                 </div>

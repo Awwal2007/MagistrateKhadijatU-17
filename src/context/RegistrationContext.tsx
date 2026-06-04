@@ -154,7 +154,7 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const fetchRoster = async () => {
     if (!authToken || !currentTeam) return;
     try {
-      const response = await fetch(`/api/teams/${currentTeam.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/teams/${currentTeam.id}`, {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
