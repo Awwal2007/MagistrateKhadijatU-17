@@ -11,8 +11,8 @@ export const RegistrationPage: React.FC = () => {
   const {
     draftClubName,
     setDraftClubName,
-    draftEmail,
-    setDraftEmail,
+    draftUsername,
+    setDraftUsername,
     draftPassword,
     setDraftPassword,
     draftLogo,
@@ -27,7 +27,7 @@ export const RegistrationPage: React.FC = () => {
   } = useRegistration();
 
   // Modal Triggers
-  const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const [showPlayerModal, setShowPlayerModal] = useState<"Under-17" | "Free Age" | null>(null);
   const [showOfficialModal, setShowOfficialModal] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -61,8 +61,8 @@ export const RegistrationPage: React.FC = () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-    if (!draftEmail.trim()) {
-      setValidationError("Club Email is a required field.");
+    if (!draftUsername.trim()) {
+      setValidationError("Username is a required field.");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -101,7 +101,7 @@ export const RegistrationPage: React.FC = () => {
             <span className="text-[#FFD700]">Under 17 Football Competition</span>
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-200 uppercase tracking-wider max-w-2xl mx-auto leading-relaxed">
-            Register your sports club, details for your 25 players (supporting 21 Under-17 &amp; 4 Free Age limits), and manage up to 4 support officials.
+            Register your sports club, details for your 25 players (supporting 20 Under-17 &amp; 5 Free Age limits), and manage up to 4 support officials.
           </p>
         </div>
       </div>
@@ -172,15 +172,15 @@ export const RegistrationPage: React.FC = () => {
                 />
               </div>
 
-              {/* Email */}
+              {/* Username */}
               <div>
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Contact Email *</label>
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">Login Username *</label>
                 <input 
-                  type="email"
+                  type="text"
                   required
-                  value={draftEmail}
-                  onChange={(e) => setDraftEmail(e.target.value)}
-                  placeholder="e.g. lagoscityfc@gmail.com"
+                  value={draftUsername}
+                  onChange={(e) => setDraftUsername(e.target.value)}
+                  placeholder="e.g. lagoscityfc"
                   className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0a3d0a] focus:ring-1 focus:ring-[#0a3d0a] bg-slate-50/50"
                 />
               </div>
@@ -259,11 +259,11 @@ export const RegistrationPage: React.FC = () => {
                   {/* LIVE STATS COUNTER */}
                   <div className="flex flex-wrap items-center gap-2.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider mt-1 bg-slate-100 py-1.5 px-3 rounded-xl border border-slate-200">
                     <div>
-                      Under-17: <span className={`text-[#0a3d0a] font-extrabold text-xs ${currentU17 >= 21 ? 'text-red-600':''}`}>{currentU17} / 21</span>
+                      Under-17: <span className={`text-[#0a3d0a] font-extrabold text-xs ${currentU17 >= 20 ? 'text-red-600':''}`}>{currentU17} / 20</span>
                     </div>
                     <span className="text-gray-300">|</span>
                     <div>
-                      Free Age: <span className={`text-[#0a3d0a] font-extrabold text-xs ${currentFreeAge >= 4 ? 'text-red-600':''}`}>{currentFreeAge} / 4</span>
+                      Free Age: <span className={`text-[#0a3d0a] font-extrabold text-xs ${currentFreeAge >= 5 ? 'text-red-600':''}`}>{currentFreeAge} / 5</span>
                     </div>
                     <span className="text-gray-300">|</span>
                     <div>
@@ -272,13 +272,26 @@ export const RegistrationPage: React.FC = () => {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowPlayerModal(true)}
-                  className="w-full sm:w-auto py-2.5 px-5 bg-[#0a3d0a] hover:bg-[#072a07] text-[#FFD700] hover:brightness-105 text-xs font-extrabold rounded-xl shadow-xs transition uppercase tracking-wider flex items-center justify-center gap-1.5"
-                >
-                  + Add Player
-                </button>
+                <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                  {currentU17 < 20 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPlayerModal("Under-17")}
+                      className="py-2.5 px-5 bg-[#0a3d0a] hover:bg-[#072a07] text-[#FFD700] hover:brightness-105 text-xs font-extrabold rounded-xl shadow-xs transition uppercase tracking-wider flex items-center justify-center gap-1.5"
+                    >
+                      + Add Under-17 Player
+                    </button>
+                  )}
+                  {currentFreeAge < 5 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowPlayerModal("Free Age")}
+                      className="py-2.5 px-5 bg-amber-600 hover:bg-amber-700 text-white hover:brightness-105 text-xs font-extrabold rounded-xl shadow-xs transition uppercase tracking-wider flex items-center justify-center gap-1.5"
+                    >
+                      + Add Overage Player
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* STAGED ATHLETE PREVIEWS LIST */}
@@ -422,13 +435,14 @@ export const RegistrationPage: React.FC = () => {
       {/* FORM MODALS TRIGGERED */}
       {showPlayerModal && (
         <PlayerForm 
+          targetCategory={showPlayerModal}
           currentU17Count={currentU17}
           currentFreeAgeCount={currentFreeAge}
           onAdd={(player) => {
             const added = addDraftPlayer(player);
-            if (added) setShowPlayerModal(false);
+            if (added) setShowPlayerModal(null);
           }}
-          onClose={() => setShowPlayerModal(false)}
+          onClose={() => setShowPlayerModal(null)}
         />
       )}
 

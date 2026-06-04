@@ -11,6 +11,7 @@ interface PlayerFormProps {
     photo: string;
   }) => void;
   onClose: () => void;
+  targetCategory: "Under-17" | "Free Age";
   currentU17Count: number;
   currentFreeAgeCount: number;
 }
@@ -18,6 +19,7 @@ interface PlayerFormProps {
 export const PlayerForm: React.FC<PlayerFormProps> = ({
   onAdd,
   onClose,
+  targetCategory,
   currentU17Count,
   currentFreeAgeCount,
 }) => {
@@ -28,9 +30,8 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
   const [showCamera, setShowCamera] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Auto category determination helper
   const parsedAge = typeof age === "number" ? age : 0;
-  const category: "Under-17" | "Free Age" = parsedAge > 0 && parsedAge <= 17 ? "Under-17" : "Free Age";
+  const category = targetCategory;
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -75,12 +76,12 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     }
 
     // Enforce client-side quota constraints
-    if (category === "Under-17" && currentU17Count >= 21) {
-      setError(`Cannot add Under-17 player. The tournament limit of 21 Under-17 players has been reached.`);
+    if (category === "Under-17" && currentU17Count >= 20) {
+      setError(`Cannot add Under-17 player. The tournament limit of 20 Under-17 players has been reached.`);
       return;
     }
-    if (category === "Free Age" && currentFreeAgeCount >= 4) {
-      setError(`Cannot add Free Age player. The tournament limit of 4 Free Age players has been reached.`);
+    if (category === "Free Age" && currentFreeAgeCount >= 5) {
+      setError(`Cannot add Overage player. The tournament limit of 5 Overage players has been reached.`);
       return;
     }
 
@@ -100,7 +101,9 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         {/* MODAL HEADER */}
         <div className="flex items-center justify-between border-b border-slate-100 bg-[#0a3d0a] px-5 py-4 text-[#FFD700]">
           <div className="flex items-center gap-2">
-            <h3 className="font-bebas text-xl tracking-wider select-none">ADD TOURNAMENT ATHLETE</h3>
+            <h3 className="font-bebas text-xl tracking-wider select-none">
+              ADD {category === "Under-17" ? "UNDER-17" : "OVERAGE"} PLAYER
+            </h3>
           </div>
           <button 
             type="button" 
@@ -171,19 +174,17 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
           </div>
 
           {/* Auto Determined Category */}
-          {parsedAge > 0 && (
-            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 flex justify-between items-center text-xs">
-              <span className="text-slate-600 font-medium">Determined Competitor Group:</span>
-              <div className="flex items-center gap-1.5">
-                <span className={`font-bold px-2.5 py-1 rounded-md text-white uppercase ${category === "Under-17" ? 'bg-emerald-600' : 'bg-amber-600'}`}>
-                  {category}
-                </span>
-                <span className="text-[10px] text-gray-400 font-semibold">
-                  ({category === "Under-17" ? `Quota: ${currentU17Count}/21` : `Quota: ${currentFreeAgeCount}/4`})
-                </span>
-              </div>
+          <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 flex justify-between items-center text-xs">
+            <span className="text-slate-600 font-medium">Competitor Group:</span>
+            <div className="flex items-center gap-1.5">
+              <span className={`font-bold px-2.5 py-1 rounded-md text-white uppercase ${category === "Under-17" ? 'bg-emerald-600' : 'bg-amber-600'}`}>
+                {category === "Under-17" ? "Under-17 Player" : "Overage Player (Free Age)"}
+              </span>
+              <span className="text-[10px] text-gray-400 font-semibold">
+                ({category === "Under-17" ? `Quota: ${currentU17Count}/20` : `Quota: ${currentFreeAgeCount}/5`})
+              </span>
             </div>
-          )}
+          </div>
 
           {/* Photo upload options */}
           <div>

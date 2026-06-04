@@ -8,7 +8,7 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { loginTeam } = useRegistration();
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,12 +22,12 @@ export const LoginPage: React.FC = () => {
       const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password })
+        body: JSON.stringify({ username: username.trim(), password })
       });
 
       if (!response.ok) {
         const errData = await response.json();
-        throw new Error(errData.message || "Invalid email or password credentials.");
+        throw new Error(errData.message || "Invalid username or password credentials.");
       }
 
       const data = await response.json();
@@ -79,13 +79,13 @@ export const LoginPage: React.FC = () => {
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Registered Email Address</label>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">Registered Username</label>
               <input
-                type="email"
+                type="text"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="lagoscityfc@gmail.com"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="e.g. lagoscityfc"
                 className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0a3d0a] focus:ring-1 focus:ring-[#0a3d0a] bg-slate-50/50"
               />
             </div>

@@ -8,7 +8,7 @@ export const PreviewPage: React.FC = () => {
   const navigate = useNavigate();
   const {
     draftClubName,
-    draftEmail,
+    draftUsername,
     draftPassword,
     draftLogo,
     draftPlayers,
@@ -57,7 +57,7 @@ export const PreviewPage: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clubName: draftClubName,
-          email: draftEmail,
+          username: draftUsername,
           password: draftPassword,
           logo: draftLogo
         })
@@ -90,6 +90,7 @@ export const PreviewPage: React.FC = () => {
             name: p.name,
             age: p.age,
             position: p.position,
+            category: p.category,
             photo: p.photo
           })
         });
@@ -142,7 +143,7 @@ export const PreviewPage: React.FC = () => {
     return {
       id: "preview-raw",
       clubName: draftClubName,
-      email: draftEmail,
+      username: draftUsername,
       logoUrl: draftLogo || "/placeholder-logo.png"
     };
   };
@@ -297,7 +298,7 @@ export const PreviewPage: React.FC = () => {
               PENDING REGISTRANT CLUB
             </span>
             <h2 className="font-bebas text-3xl text-slate-900 tracking-wide uppercase pt-1">{draftClubName || "UNNAMED CLUB"}</h2>
-            <p className="text-xs text-slate-400 font-mono">Sign-in correspondence: {draftEmail}</p>
+            <p className="text-xs text-slate-400 font-mono">Sign-in username: {draftUsername}</p>
           </div>
         </div>
 

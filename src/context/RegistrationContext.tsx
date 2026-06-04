@@ -19,8 +19,8 @@ interface RegistrationContextProps {
   // Staging Draft State (New Registration)
   draftClubName: string;
   setDraftClubName: (name: string) => void;
-  draftEmail: string;
-  setDraftEmail: (email: string) => void;
+  draftUsername: string;
+  setDraftUsername: (username: string) => void;
   draftPassword: string;
   setDraftPassword: (pass: string) => void;
   draftLogo: string; // Base64
@@ -51,7 +51,7 @@ const RegistrationContext = createContext<RegistrationContextProps | undefined>(
 export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Draft Stores
   const [draftClubName, setDraftClubName] = useState("");
-  const [draftEmail, setDraftEmail] = useState("");
+  const [draftUsername, setDraftUsername] = useState("");
   const [draftPassword, setDraftPassword] = useState("");
   const [draftLogo, setDraftLogo] = useState("");
   const [draftPlayers, setDraftPlayers] = useState<DraftPlayer[]>([]);
@@ -78,12 +78,12 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       alert("A club roster cannot exceed 25 players total.");
       return false;
     }
-    if (player.category === "Under-17" && u17Count >= 21) {
-      alert("Registration limit reached for Under-17 players (Max 21).");
+    if (player.category === "Under-17" && u17Count >= 20) {
+      alert("Registration limit reached for Under-17 players (Max 20).");
       return false;
     }
-    if (player.category === "Free Age" && freeAgeCount >= 4) {
-      alert("Registration limit reached for Free Age players (Max 4).");
+    if (player.category === "Free Age" && freeAgeCount >= 5) {
+      alert("Registration limit reached for Overage players (Max 5).");
       return false;
     }
 
@@ -110,7 +110,7 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const clearDrafts = () => {
     setDraftClubName("");
-    setDraftEmail("");
+    setDraftUsername("");
     setDraftPassword("");
     setDraftLogo("");
     setDraftPlayers([]);
@@ -176,8 +176,8 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       value={{
         draftClubName,
         setDraftClubName,
-        draftEmail,
-        setDraftEmail,
+        draftUsername,
+        setDraftUsername,
         draftPassword,
         setDraftPassword,
         draftLogo,

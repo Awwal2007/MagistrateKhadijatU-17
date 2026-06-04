@@ -13,13 +13,14 @@ export default function App() {
       <Router>
         <Routes>
           {/* Public Intake registration */}
-          <Route path="/" element={<RegistrationPage />} />
+          <Route path="/register" element={<RegistrationPage />} />
           
           {/* Staging & layouts validation previews */}
           <Route path="/preview" element={<PreviewPage />} />
           
           {/* Traditional Club authentication */}
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={<LoginPage />} />
           
           {/* Authentic workspace panels */}
           <Route path="/portal" element={<ClubPortal />} />

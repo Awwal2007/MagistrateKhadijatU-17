@@ -92,12 +92,12 @@ export const PrintCard: React.FC<PrintCardProps> = ({ person, type, team }) => {
             {isPlayer ? (
               <div className="grid grid-cols-2 gap-2 mt-1.5 text-[8.5px]">
                 <div>
-                  <div className="text-[7.5px] text-gray-400 font-medium">AGE Group</div>
-                  <div className="font-bold text-slate-800 uppercase leading-none mt-0.5">{person.category || (person.age <= 17 ? "Under-17" : "Free Age")}</div>
+                  <div className="text-[7.5px] text-gray-400 font-medium">Category</div>
+                <div className={`font-bold uppercase leading-none mt-0.5 ${person.category === "Free Age" ? 'text-amber-700' : 'text-slate-800'}`}>{person.category === "Free Age" ? "Overage" : "Under-17"}</div>
                 </div>
                 <div>
-                  <div className="text-[7.5px] text-gray-400 font-medium">JERSEY #</div>
-                  <div className="font-extrabold text-[#0a3d0a] text-[11px] leading-none">#{person.jerseyNumber || "—"}</div>
+                  <div className="text-[7.5px] text-gray-400 font-medium">POSITION</div>
+                  <div className="font-extrabold text-[#0a3d0a] text-[9.5px] leading-none uppercase truncate">{person.position || "—"}</div>
                 </div>
               </div>
             ) : (

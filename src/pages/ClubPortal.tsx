@@ -23,7 +23,7 @@ export const ClubPortal: React.FC = () => {
   const [errorOnLoad, setErrorOnLoad] = useState<string | null>(null);
 
   // Form modals state
-  const [showPlayerModal, setShowPlayerModal] = useState(false);
+  const [showPlayerModal, setShowPlayerModal] = useState<"Under-17" | "Free Age" | null>(null);
   const [showOfficialModal, setShowOfficialModal] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -211,25 +211,23 @@ export const ClubPortal: React.FC = () => {
 
         {/* QUOTA COMPLIANCE DASHBOARD */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white border border-slate-200/60 shadow-xs rounded-2xl p-4 space-y-1">
-            <span className="text-[9px] uppercase tracking-wider text-slate-400 font-extrabold block">Competitors: Under-17</span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-[#0a3d0a]">{u17Count}</span>
-              <span className="text-xs text-slate-400 font-bold">/ 21 Allocation</span>
+          <div className="bg-white border border-slate-200/60 shadow-xs rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm font-bold text-slate-700">Under-17</span>
+              <span className="text-xs text-slate-400 font-bold">/ 20 Limit</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-              <div className="bg-emerald-600 h-1.5 rounded-full" style={{ width: `${(u17Count/21)*100}%` }} />
+              <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${(u17Count/20)*100}%` }} />
             </div>
           </div>
 
-          <div className="bg-white border border-slate-200/60 shadow-xs rounded-2xl p-4 space-y-1">
-            <span className="text-[9px] uppercase tracking-wider text-slate-400 font-extrabold block">Competitors: Free Age</span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-black text-amber-700">{freeAgeCount}</span>
-              <span className="text-xs text-slate-400 font-bold">/ 4 Allocation</span>
+          <div className="bg-white p-3 rounded-xl border border-slate-200">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm font-bold text-slate-700">Overage (Free Age)</span>
+              <span className="text-xs text-slate-400 font-bold">/ 5 Limit</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-              <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${(freeAgeCount/4)*100}%` }} />
+              <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${(freeAgeCount/5)*100}%` }} />
             </div>
           </div>
 
@@ -252,26 +250,48 @@ export const ClubPortal: React.FC = () => {
               <h3 className="font-bebas text-2xl text-[#0a3d0a] tracking-wider uppercase">PLAYERS ID CREDENTIALS</h3>
               <p className="text-xs text-slate-400">Manage, preview, and output passport sports credentials</p>
             </div>
-            {totalPlayers < 25 && (
-              <button
-                onClick={() => setShowPlayerModal(true)}
-                className="py-1.5 px-3.5 bg-[#0a3d0a] hover:bg-[#072a07] text-[#FFD700] text-xs font-bold rounded-lg transition uppercase flex items-center gap-1 shadow-sm"
-              >
-                + Append Player
-              </button>
-            )}
+            <div className="flex flex-col sm:flex-row gap-2">
+              {u17Count < 20 && (
+                <button
+                  onClick={() => setShowPlayerModal("Under-17")}
+                  className="py-1.5 px-3.5 bg-[#0a3d0a] hover:bg-[#072a07] text-[#FFD700] text-xs font-bold rounded-lg transition uppercase flex items-center gap-1 shadow-sm"
+                >
+                  + Add Under-17 Player
+                </button>
+              )}
+              {freeAgeCount < 5 && (
+                <button
+                  onClick={() => setShowPlayerModal("Free Age")}
+                  className="py-1.5 px-3.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition uppercase flex items-center gap-1 shadow-sm"
+                >
+                  + Add Overage Player
+                </button>
+              )}
+            </div>
           </div>
 
           {rosterPlayers.length === 0 ? (
             <div className="bg-white py-12 text-center text-slate-400 border border-slate-200/60 rounded-2xl">
               <span className="text-3xl">🏃‍♂️</span>
               <p className="text-xs font-semibold text-slate-700 mt-2">No Verified Competitors Found</p>
-              <button
-                onClick={() => setShowPlayerModal(true)}
-                className="mt-3 text-xs bg-[#0a3d0a] text-[#FFD700] px-4 py-2 rounded-lg font-bold uppercase transition"
-              >
-                Assemble New Competitor
-              </button>
+              <div className="flex justify-center gap-2 mt-4">
+                {u17Count < 20 && (
+                  <button
+                    onClick={() => setShowPlayerModal("Under-17")}
+                    className="text-xs text-[#0a3d0a] font-bold hover:underline"
+                  >
+                    + Add Under-17 Player
+                  </button>
+                )}
+                {freeAgeCount < 5 && (
+                  <button
+                    onClick={() => setShowPlayerModal("Free Age")}
+                    className="text-xs text-amber-600 font-bold hover:underline"
+                  >
+                    + Add Overage Player
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
           <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
@@ -392,10 +412,11 @@ export const ClubPortal: React.FC = () => {
       {/* FORM MODALS MODIFIERS */}
       {showPlayerModal && (
         <PlayerForm 
+          targetCategory={showPlayerModal}
           currentU17Count={u17Count}
           currentFreeAgeCount={freeAgeCount}
           onAdd={handleAddPlayer}
-          onClose={() => setShowPlayerModal(false)}
+          onClose={() => setShowPlayerModal(null)}
         />
       )}
 

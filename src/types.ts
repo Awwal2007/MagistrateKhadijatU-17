@@ -1,7 +1,7 @@
 export interface Team {
   id: string;
   clubName: string;
-  email: string;
+  username: string;
   logoUrl: string;
   createdAt?: string;
 }
