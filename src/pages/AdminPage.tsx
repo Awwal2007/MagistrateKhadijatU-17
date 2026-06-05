@@ -213,10 +213,10 @@ export const AdminPage: React.FC = () => {
 
           <div className="text-center">
             <div className="flex justify-center mb-4">
-              <img src={tournamentLogo} alt="MKO U17" className="h-16 w-16 rounded-full border-2 border-[#FFD700] object-cover shadow-lg shadow-yellow-900/40" />
+              <img src={tournamentLogo} alt="Magistrate Khadijat Oloyade U17" className="h-16 w-16 rounded-full border-2 border-[#FFD700] object-cover shadow-lg shadow-yellow-900/40" />
             </div>
             <h2 className="font-bebas text-4xl sm:text-5xl tracking-widest text-[#FFD700]">ADMIN VERIFICATION</h2>
-            <p className="mt-1.5 text-xs text-slate-400 font-semibold uppercase tracking-widest">MKO Under-17 Cup · Control Center</p>
+            <p className="mt-1.5 text-xs text-slate-400 font-semibold uppercase tracking-widest">Magistrate Khadijat Oloyade Under-17 Cup · Control Center</p>
           </div>
 
           <div className="bg-slate-900 border border-emerald-800/40 py-8 px-6 shadow-2xl rounded-3xl space-y-5 animate-fade-in">
@@ -278,9 +278,9 @@ export const AdminPage: React.FC = () => {
       <nav className="green-mesh border-b-4 border-[#FFD700] text-white py-3 px-4 sticky top-0 z-30 shadow-lg no-print">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <img src={tournamentLogo} alt="MKO U17" className="h-9 w-9 rounded-full border-2 border-[#FFD700] object-cover shadow-sm" />
+            <img src={tournamentLogo} alt="Magistrate Khadijat Oloyade U17" className="h-9 w-9 rounded-full border-2 border-[#FFD700] object-cover shadow-sm" />
             <div>
-              <h1 className="font-bebas text-lg tracking-wider text-[#FFD700] leading-none uppercase">MKO Cup Admin Desk</h1>
+              <h1 className="font-bebas text-lg tracking-wider text-[#FFD700] leading-none uppercase">Magistrate Khadijat Oloyade Cup Admin Desk</h1>
               <span className="text-[9px] text-[#FFD700]/60 font-mono tracking-widest block uppercase leading-none mt-0.5">Master Ledger Workspace</span>
             </div>
           </div>

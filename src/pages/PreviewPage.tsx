@@ -176,7 +176,7 @@ export const PreviewPage: React.FC = () => {
               className="w-12 h-12 rounded-full border border-[#FFD700] bg-white flex-shrink-0" 
             />
             <div>
-              <p className="text-xs font-bold text-[#FFD700]">Welcome to MKO Cup</p>
+              <p className="text-xs font-bold text-[#FFD700]">Welcome to Magistrate Khadijat Oloyade Cup</p>
               <p className="text-[10px] text-slate-400 leading-normal mt-0.5">
                 We have logged you in automatically. Read and print your tournament rosters via the User Panel.
               </p>
