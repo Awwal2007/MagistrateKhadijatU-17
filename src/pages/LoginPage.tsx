@@ -113,7 +113,7 @@ export const LoginPage: React.FC = () => {
             </div>
           </form>
 
-          <div className="border-t border-slate-100 pt-4 text-center">
+          {/* <div className="border-t border-slate-100 pt-4 text-center">
             <span className="text-[11px] text-slate-400 block font-medium">New Academy or unregistered?</span>
             <Link 
               to="/"
@@ -121,7 +121,7 @@ export const LoginPage: React.FC = () => {
             >
               Start New Registration Profile
             </Link>
-          </div>
+          </div> */}
 
         </div>
       </div>
