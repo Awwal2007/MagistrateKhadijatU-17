@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Camera, Upload, AlertCircle, X } from "lucide-react";
+import { Camera, Upload, AlertCircle, X, RefreshCw } from "lucide-react";
 import { CameraCapture } from "./CameraCapture.js";
 
 interface OfficialFormProps {
@@ -7,7 +7,7 @@ interface OfficialFormProps {
     name: string;
     position: "Head Coach" | "Assistant Coach" | "Team Doctor" | "Kit Manager" | "Manager";
     photo: string;
-  }) => void;
+  }) => void | Promise<void>;
   onClose: () => void;
   currentOfficialCount: number;
 }
@@ -22,6 +22,7 @@ export const OfficialForm: React.FC<OfficialFormProps> = ({
   const [photo, setPhoto] = useState<string>("");
   const [showCamera, setShowCamera] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -48,8 +49,9 @@ export const OfficialForm: React.FC<OfficialFormProps> = ({
     setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setError(null);
 
     if (!name.trim()) {
@@ -65,11 +67,18 @@ export const OfficialForm: React.FC<OfficialFormProps> = ({
       return;
     }
 
-    onAdd({
-      name: name.trim(),
-      position,
-      photo,
-    });
+    setIsSubmitting(true);
+    try {
+      await onAdd({
+        name: name.trim(),
+        position,
+        photo,
+      });
+    } catch (err: any) {
+      setError(err.message || "Failed to add official.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -193,9 +202,14 @@ export const OfficialForm: React.FC<OfficialFormProps> = ({
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3 bg-[#0a3d0a] hover:bg-[#072a07] text-[#FFD700] hover:brightness-110 text-sm font-bold tracking-wider rounded-xl transition shadow uppercase"
+              disabled={isSubmitting}
+              className="w-full py-3 bg-[#0a3d0a] hover:bg-[#072a07] text-[#FFD700] hover:brightness-110 text-sm font-bold tracking-wider rounded-xl transition shadow uppercase flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Add Official to Roster Code
+              {isSubmitting ? (
+                <><RefreshCw className="h-4 w-4 animate-spin" />Registering Official...</>
+              ) : (
+                "Add Official to Roster Code"
+              )}
             </button>
           </div>
         </form>

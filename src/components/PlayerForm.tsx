@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Camera, Upload, AlertCircle, X, HelpCircle } from "lucide-react";
+import { Camera, Upload, AlertCircle, X, HelpCircle, RefreshCw } from "lucide-react";
 import { CameraCapture } from "./CameraCapture.js";
 
 interface PlayerFormProps {
@@ -9,7 +9,7 @@ interface PlayerFormProps {
     position: "Goalkeeper" | "Defender" | "Midfielder" | "Forward";
     category: "Under-17" | "Free Age";
     photo: string;
-  }) => void;
+  }) => void | Promise<void>;
   onClose: () => void;
   targetCategory: "Under-17" | "Free Age";
   currentU17Count: number;
@@ -29,6 +29,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
   const [photo, setPhoto] = useState<string>("");
   const [showCamera, setShowCamera] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const parsedAge = typeof age === "number" ? age : 0;
   const category = targetCategory;
@@ -58,8 +59,9 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setError(null);
 
     if (!name.trim()) {
@@ -85,13 +87,20 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       return;
     }
 
-    onAdd({
-      name: name.trim(),
-      age: parsedAge,
-      position,
-      category,
-      photo,
-    });
+    setIsSubmitting(true);
+    try {
+      await onAdd({
+        name: name.trim(),
+        age: parsedAge,
+        position,
+        category,
+        photo,
+      });
+    } catch (err: any) {
+      setError(err.message || "Failed to add player.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -240,9 +249,14 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3 bg-[#0a3d0a] hover:bg-[#072a07] text-[#FFD700] hover:brightness-110 text-sm font-bold tracking-wider rounded-xl transition shadow uppercase"
+              disabled={isSubmitting}
+              className="w-full py-3 bg-[#0a3d0a] hover:bg-[#072a07] text-[#FFD700] hover:brightness-110 text-sm font-bold tracking-wider rounded-xl transition shadow uppercase flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Add Player to Roster Code
+              {isSubmitting ? (
+                <><RefreshCw className="h-4 w-4 animate-spin" />Registering Player...</>
+              ) : (
+                "Add Player to Roster Code"
+              )}
             </button>
           </div>
         </form>

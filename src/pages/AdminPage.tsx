@@ -35,6 +35,9 @@ export const AdminPage: React.FC = () => {
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [errorOnRecords, setErrorOnRecords] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"players" | "officials">("players");
+  const [deletingPlayerId, setDeletingPlayerId] = useState<string | null>(null);
+  const [deletingOfficialId, setDeletingOfficialId] = useState<string | null>(null);
+  const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAdmin && authToken) {
@@ -98,6 +101,7 @@ export const AdminPage: React.FC = () => {
 
   const handleRemovePlayer = async (playerId: string) => {
     if (!window.confirm("Are you absolutely sure you want to delete this player card? This action is irreversible.")) return;
+    setDeletingPlayerId(playerId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/players/${playerId}`, {
         method: "DELETE",
@@ -110,11 +114,14 @@ export const AdminPage: React.FC = () => {
       await loadAdminRecords();
     } catch (err: any) {
       alert("Error: " + err.message);
+    } finally {
+      setDeletingPlayerId(null);
     }
   };
 
   const handleRemoveOfficial = async (officialId: string) => {
     if (!window.confirm("Are you sure you want to delete this official's badge?")) return;
+    setDeletingOfficialId(officialId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/officials/${officialId}`, {
         method: "DELETE",
@@ -127,11 +134,14 @@ export const AdminPage: React.FC = () => {
       await loadAdminRecords();
     } catch (err: any) {
       alert("Error: " + err.message);
+    } finally {
+      setDeletingOfficialId(null);
     }
   };
 
   const handleRemoveTeam = async (teamId: string) => {
     if (!window.confirm("WARNING: Deleting this Club/Team will instantly wipe their login, all player cards and officials. Are you absolutely certain?")) return;
+    setDeletingTeamId(teamId);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/teams/${teamId}`, {
         method: "DELETE",
@@ -144,6 +154,8 @@ export const AdminPage: React.FC = () => {
       await loadAdminRecords();
     } catch (err: any) {
       alert("Error Deleting Team: " + err.message);
+    } finally {
+      setDeletingTeamId(null);
     }
   };
 
@@ -450,10 +462,14 @@ export const AdminPage: React.FC = () => {
                       </button>
                       <button
                         onClick={() => handleRemoveTeam(selectedTeam.id)}
-                        className="flex-1 sm:flex-none py-2 px-4 bg-red-600/90 hover:bg-red-700 text-white border border-red-500 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
+                        disabled={deletingTeamId === selectedTeam.id}
+                        className="flex-1 sm:flex-none py-2 px-4 bg-red-600/90 hover:bg-red-700 text-white border border-red-500 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Trash2 className="h-4 w-4" />
-                        Delete Club
+                        {deletingTeamId === selectedTeam.id ? (
+                          <><RefreshCw className="h-4 w-4 animate-spin" />Deleting...</>
+                        ) : (
+                          <><Trash2 className="h-4 w-4" />Delete Club</>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -526,10 +542,15 @@ export const AdminPage: React.FC = () => {
                                 </button>
                                 <button
                                   onClick={() => handleRemovePlayer(player._id)}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition"
+                                  disabled={deletingPlayerId === player._id}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
                                   title="Delete Player"
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  {deletingPlayerId === player._id ? (
+                                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  )}
                                 </button>
                               </div>
                             </div>
@@ -568,10 +589,15 @@ export const AdminPage: React.FC = () => {
                               </button>
                               <button
                                 onClick={() => handleRemoveOfficial(official._id)}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition"
+                                disabled={deletingOfficialId === official._id}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Delete Official"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
+                                {deletingOfficialId === official._id ? (
+                                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                )}
                               </button>
                             </div>
                           </div>
