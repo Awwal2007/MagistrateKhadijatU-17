@@ -42,10 +42,17 @@ export interface Match {
   awayTeamLogo?: string;
   homeScore: number | null;
   awayScore: number | null;
-  status: "Scheduled" | "Completed";
+  status: "Scheduled" | "Live" | "Completed";
   stage: "Group Stage" | "Quarter Final" | "Semi Final" | "Final";
   group: "A" | "B" | "C" | null;
   matchDate: string;
+  goals?: Array<{
+    playerId: string;
+    playerName: string;
+    jerseyNumber: number;
+    team: "home" | "away";
+    timestamp: string;
+  }>;
 }
 
 export interface GroupStanding {

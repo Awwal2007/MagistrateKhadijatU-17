@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Match, Team } from "../types.js";
+import { Match, Team, Player } from "../types.js";
 import {
   Trophy, Calendar, Plus, Trash2, Shield, CalendarDays,
   RefreshCw, CheckCircle, Clock, ChevronDown, Swords, Star,
-  AlertCircle, Layers
+  AlertCircle, Layers, Zap
 } from "lucide-react";
+import { LiveScoringBoard } from "./LiveScoringBoard.js";
 
 interface FullTeamRoster extends Team {
   group?: "A" | "B" | "C" | null;
+  players?: Player[];
+  officials?: any[];
 }
 
 interface TournamentManagerProps {
@@ -34,7 +37,12 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   const [loading, setLoading]       = useState(false);
   const [syncing, setSyncing]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<"groups" | "schedule" | "matches" | "standings">("matches");
+  const [activeSection, setActiveSection] = useState<"groups" | "schedule" | "matches" | "standings" | "live-scoring">("matches");
+
+  // Live Scoring State
+  const [selectedLiveMatch, setSelectedLiveMatch] = useState<Match | null>(null);
+  const [homeTeamPlayers, setHomeTeamPlayers] = useState<Player[]>([]);
+  const [awayTeamPlayers, setAwayTeamPlayers] = useState<Player[]>([]);
 
   // Score editing local state: matchId -> { home, away }
   const [scoreEdits, setScoreEdits] = useState<Record<string, { home: string; away: string }>>({});
@@ -167,6 +175,24 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
     }
   };
 
+  const loadPlayersForMatch = (match: Match) => {
+    const homeTeam = teams.find(t => t.id === match.homeTeamId);
+    const awayTeam = teams.find(t => t.id === match.awayTeamId);
+
+    if (homeTeam) {
+      setHomeTeamPlayers((homeTeam.players as any) || []);
+    }
+    if (awayTeam) {
+      setAwayTeamPlayers((awayTeam.players as any) || []);
+    }
+  };
+
+  const handleSelectLiveMatch = (match: Match) => {
+    setSelectedLiveMatch(match);
+    loadPlayersForMatch(match);
+    setActiveSection("live-scoring");
+  };
+
   // Group matches by stage for display
   const stageOrder = ["Group Stage", "Quarter Final", "Semi Final", "Final"];
   const matchesByStage = stageOrder.reduce((acc, stage) => {
@@ -201,6 +227,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
 
   const sections = [
     { id: "matches",  label: "Match Board",      icon: Swords },
+    { id: "live-scoring", label: "Live Scoring", icon: Zap },
     { id: "standings", label: "Standings",        icon: Trophy },
     { id: "groups",   label: "Group Allocation",  icon: Shield },
     { id: "schedule", label: "Schedule Match",    icon: CalendarDays },
@@ -396,6 +423,13 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
 
                           {/* Right: actions */}
                           <div className="flex items-center gap-2 self-end sm:self-center">
+                            <button
+                              onClick={() => handleSelectLiveMatch(match)}
+                              title="Start Live Scoring"
+                              className="p-2 rounded-xl border transition text-xs font-bold text-orange-600 bg-orange-50 border-orange-200 hover:bg-orange-100"
+                            >
+                              <Zap className="h-4 w-4" />
+                            </button>
                             <button
                               onClick={() => handleStatusToggle(match)}
                               title={isCompleted ? "Mark as Scheduled" : "Mark as Completed"}
@@ -774,6 +808,36 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
               {creating ? "Scheduling..." : "Schedule Match"}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* ───── LIVE SCORING ───── */}
+      {activeSection === "live-scoring" && (
+        <div>
+          {selectedLiveMatch ? (
+            <LiveScoringBoard
+              match={selectedLiveMatch}
+              homeTeamPlayers={homeTeamPlayers}
+              awayTeamPlayers={awayTeamPlayers}
+              authToken={authToken}
+              onMatchUpdated={(updatedMatch) => {
+                setSelectedLiveMatch(updatedMatch);
+                loadMatches();
+              }}
+            />
+          ) : (
+            <div className="bg-white rounded-3xl border border-slate-200/60 shadow-xs overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                <Zap className="h-5 w-5 text-[#0a3d0a]" />
+                <h3 className="font-bebas text-xl text-[#0a3d0a] tracking-wider uppercase">Live Scoring</h3>
+              </div>
+              <div className="py-16 text-center text-slate-400 text-xs px-6">
+                <div className="text-5xl mb-4">⚡</div>
+                <p className="font-semibold mb-2">Select a Match to Start Live Scoring</p>
+                <p>Go to the <strong>Match Board</strong> tab and click the ⚡ button on any match to begin live scoring.</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
