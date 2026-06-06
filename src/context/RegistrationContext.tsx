@@ -82,8 +82,8 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       alert("Registration limit reached for Under-17 players (Max 20).");
       return false;
     }
-    if (player.category === "Free Age" && freeAgeCount >= 5) {
-      alert("Registration limit reached for Overage players (Max 5).");
+    if (player.category === "Free Age" && freeAgeCount >= 6) {
+      alert("Registration limit reached for Overage players (Max 6).");
       return false;
     }
 

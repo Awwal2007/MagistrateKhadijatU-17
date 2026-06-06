@@ -37,8 +37,12 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith("image/")) {
+        setError("Invalid file type. Please upload a valid image file (e.g., JPG, PNG).");
+        return;
+      }
       if (file.size > 5 * 1024 * 1024) {
-        setError("File size exceeds 5MB limit. Please upload a smaller image.");
+        setError(`File size is too large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Please upload an image smaller than 5MB.`);
         return;
       }
       const reader = new FileReader();
@@ -47,7 +51,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         setError(null);
       };
       reader.onerror = () => {
-        setError("Error reading file.");
+        setError("An error occurred while reading the file. Please try again.");
       };
       reader.readAsDataURL(file);
     }
@@ -82,8 +86,8 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       setError(`Cannot add Under-17 player. The tournament limit of 20 Under-17 players has been reached.`);
       return;
     }
-    if (category === "Free Age" && currentFreeAgeCount >= 5) {
-      setError(`Cannot add Overage player. The tournament limit of 5 Overage players has been reached.`);
+    if (category === "Free Age" && currentFreeAgeCount >= 6) {
+      setError(`Cannot add Overage player. The tournament limit of 6 Overage players has been reached.`);
       return;
     }
 
@@ -190,7 +194,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
                 {category === "Under-17" ? "Under-17 Player" : "Overage Player (Free Age)"}
               </span>
               <span className="text-[10px] text-gray-400 font-semibold">
-                ({category === "Under-17" ? `Quota: ${currentU17Count}/20` : `Quota: ${currentFreeAgeCount}/5`})
+                ({category === "Under-17" ? `Quota: ${currentU17Count}/20` : `Quota: ${currentFreeAgeCount}/6`})
               </span>
             </div>
           </div>

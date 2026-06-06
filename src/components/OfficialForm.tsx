@@ -27,8 +27,12 @@ export const OfficialForm: React.FC<OfficialFormProps> = ({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith("image/")) {
+        setError("Invalid file type. Please upload a valid image file (e.g., JPG, PNG).");
+        return;
+      }
       if (file.size > 5 * 1024 * 1024) {
-        setError("File size exceeds 5MB limit. Please upload a smaller image.");
+        setError(`File size is too large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Please upload an image smaller than 5MB.`);
         return;
       }
       const reader = new FileReader();
@@ -37,7 +41,7 @@ export const OfficialForm: React.FC<OfficialFormProps> = ({
         setError(null);
       };
       reader.onerror = () => {
-        setError("Error reading file.");
+        setError("An error occurred while reading the file. Please try again.");
       };
       reader.readAsDataURL(file);
     }

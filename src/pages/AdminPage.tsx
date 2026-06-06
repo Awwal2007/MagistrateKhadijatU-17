@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
+import { TournamentManager } from "../components/TournamentManager.js";
 import { Team, Player, Official } from "../types.js";
 import tournamentLogo from "../assets/logo.jpeg";
 
@@ -18,6 +19,7 @@ interface FullTeamRoster {
   createdAt: string;
   players: Player[];
   officials: Official[];
+  group?: "A" | "B" | "C" | null;
 }
 
 export const AdminPage: React.FC = () => {
@@ -34,7 +36,7 @@ export const AdminPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [errorOnRecords, setErrorOnRecords] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"players" | "officials">("players");
+  const [activeTab, setActiveTab] = useState<"players" | "officials" | "tournament">("players");
   const [deletingPlayerId, setDeletingPlayerId] = useState<string | null>(null);
   const [deletingOfficialId, setDeletingOfficialId] = useState<string | null>(null);
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
@@ -190,7 +192,7 @@ export const AdminPage: React.FC = () => {
   const normalTotal = fullTeamsList.reduce((s, t) => s + t.players.filter(p => p.category === "Under-17").length, 0);
   const overageTotal = fullTeamsList.reduce((s, t) => s + t.players.filter(p => p.category === "Free Age").length, 0);
   const normalMax = fullTeamsList.length * 20;
-  const overageMax = fullTeamsList.length * 5;
+  const overageMax = fullTeamsList.length * 6;
 
   // ---------------------------------------------------------------------------
   // AUTH PROMPT VIEW
@@ -320,7 +322,7 @@ export const AdminPage: React.FC = () => {
             { label: "Registered Clubs", value: fullTeamsList.length, sub: null, icon: Building2, color: "text-[#0a3d0a]", bg: "bg-emerald-50", border: "border-emerald-200" },
             { label: "Total Players", value: totalPlayers, sub: `${totalOfficials} officials`, icon: Users, color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200" },
             { label: "Under-17 Players", value: normalTotal, sub: normalMax > 0 ? `${normalTotal} / ${normalMax} slots` : "20 per club", icon: Trophy, color: "text-emerald-700", bg: "bg-green-50", border: "border-green-200" },
-            { label: "Overage Players", value: overageTotal, sub: overageMax > 0 ? `${overageTotal} / ${overageMax} slots` : "5 per club", icon: TrendingUp, color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
+            { label: "Overage Players", value: overageTotal, sub: overageMax > 0 ? `${overageTotal} / ${overageMax} slots` : "6 per club", icon: TrendingUp, color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200" },
           ].map(({ label, value, sub, icon: Icon, color, bg, border }) => (
             <div key={label} className={`${bg} border ${border} rounded-2xl p-4 flex items-center gap-3 shadow-xs`}>
               <div className={`p-2 rounded-xl bg-white shadow-xs flex-shrink-0`}>
@@ -478,7 +480,7 @@ export const AdminPage: React.FC = () => {
                   <div className="px-6 py-3 bg-slate-50 border-t border-slate-100 grid grid-cols-3 gap-4 text-[10px]">
                     {[
                       { label: "Under-17 Players", count: selectedTeam.players.filter(p => p.category === "Under-17").length, max: 20, color: "bg-emerald-500" },
-                      { label: "Overage Players", count: selectedTeam.players.filter(p => p.category === "Free Age").length, max: 5, color: "bg-amber-500" },
+                      { label: "Overage Players", count: selectedTeam.players.filter(p => p.category === "Free Age").length, max: 6, color: "bg-amber-500" },
                       { label: "Officials", count: selectedTeam.officials.length, max: 4, color: "bg-blue-500" },
                     ].map(({ label, count, max, color }) => (
                       <div key={label}>
@@ -495,12 +497,12 @@ export const AdminPage: React.FC = () => {
                 </div>
 
                 {/* TABS */}
-                <div className="flex gap-2 no-print">
-                  {(["players", "officials"] as const).map(tab => (
+                <div className="flex gap-2 no-print overflow-x-auto pb-1">
+                  {(["players", "officials", "tournament"] as const).map(tab => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all ${
+                      className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
                         activeTab === tab
                           ? 'bg-[#0a3d0a] text-[#FFD700] shadow-sm'
                           : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
@@ -508,10 +510,21 @@ export const AdminPage: React.FC = () => {
                     >
                       {tab === "players"
                         ? `Players (${selectedTeam.players.length})`
-                        : `Officials (${selectedTeam.officials.length})`}
+                        : tab === "officials"
+                        ? `Officials (${selectedTeam.officials.length})`
+                        : "Tournament Manager"}
                     </button>
                   ))}
                 </div>
+
+                {/* TOURNAMENT MANAGER TAB */}
+                {activeTab === "tournament" && (
+                  <TournamentManager 
+                    teams={fullTeamsList} 
+                    authToken={authToken || ""} 
+                    onRefreshTeams={loadAdminRecords} 
+                  />
+                )}
 
                 {/* PLAYERS TAB */}
                 {activeTab === "players" && (

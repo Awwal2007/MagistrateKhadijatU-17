@@ -40,13 +40,24 @@ export const RegistrationPage: React.FC = () => {
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("Logo file is too large. Max size is 2MB.");
+      if (!file.type.startsWith("image/")) {
+        setValidationError("Invalid file type. Please upload a valid image file (e.g., JPG, PNG).");
+        window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
+      if (file.size > 2 * 1024 * 1024) {
+        setValidationError(`Logo file is too large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Max size allowed is 2MB.`);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      setValidationError(null);
       const reader = new FileReader();
       reader.onloadend = () => {
         setDraftLogo(reader.result as string);
+      };
+      reader.onerror = () => {
+        setValidationError("An error occurred while reading the logo file. Please try again.");
+        window.scrollTo({ top: 0, behavior: "smooth" });
       };
       reader.readAsDataURL(file);
     }
@@ -101,7 +112,7 @@ export const RegistrationPage: React.FC = () => {
             <span className="text-[#FFD700]">Under 17 Football Competition</span>
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-200 uppercase tracking-wider max-w-2xl mx-auto leading-relaxed">
-            Register your sports club, details for your 25 players (supporting 20 Under-17 &amp; 5 Free Age limits), and manage up to 4 support officials.
+            Register your sports club, details for your 25 players (supporting 20 Under-17 &amp; 6 Free Age limits), and manage up to 4 support officials.
           </p>
         </div>
       </div>
@@ -263,7 +274,7 @@ export const RegistrationPage: React.FC = () => {
                     </div>
                     <span className="text-gray-300">|</span>
                     <div>
-                      Free Age: <span className={`text-[#0a3d0a] font-extrabold text-xs ${currentFreeAge >= 5 ? 'text-red-600':''}`}>{currentFreeAge} / 5</span>
+                      Free Age: <span className={`text-[#0a3d0a] font-extrabold text-xs ${currentFreeAge >= 6 ? 'text-red-600':''}`}>{currentFreeAge} / 6</span>
                     </div>
                     <span className="text-gray-300">|</span>
                     <div>
@@ -282,7 +293,7 @@ export const RegistrationPage: React.FC = () => {
                       + Add Under-17 Player
                     </button>
                   )}
-                  {currentFreeAge < 5 && (
+                  {currentFreeAge < 6 && (
                     <button
                       type="button"
                       onClick={() => setShowPlayerModal("Free Age")}

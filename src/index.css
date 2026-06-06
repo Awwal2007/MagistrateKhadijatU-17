@@ -54,24 +54,22 @@
     }
     
     .print-grid {
-      display: flex !important;
-      flex-wrap: wrap !important;
+      display: grid !important;
+      grid-template-columns: repeat(2, 1fr) !important;
       gap: 6mm !important;
       padding: 0 !important;
-      align-items: flex-start !important;
-      align-content: flex-start !important;
+      align-items: start !important;
     }
 
     .print-grid > div {
-      flex: 0 0 auto !important;
-      width: 85mm !important;
+      width: 100% !important;
       height: 54mm !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
 
     .print-card-container {
-      width: 85mm !important;
+      width: 100% !important;
       height: 54mm !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;

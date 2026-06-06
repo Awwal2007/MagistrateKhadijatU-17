@@ -4,6 +4,7 @@ export interface Team {
   username: string;
   logoUrl: string;
   createdAt?: string;
+  group?: "A" | "B" | "C" | null;
 }
 
 export interface Player {
@@ -29,4 +30,34 @@ export interface RegistrationState {
   team: Team | null;
   players: Omit<Player, "_id" | "teamId" | "jerseyNumber">[];
   officials: Omit<Official, "_id" | "teamId">[];
+}
+
+export interface Match {
+  _id: string;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeTeamName?: string;
+  homeTeamLogo?: string;
+  awayTeamName?: string;
+  awayTeamLogo?: string;
+  homeScore: number | null;
+  awayScore: number | null;
+  status: "Scheduled" | "Completed";
+  stage: "Group Stage" | "Quarter Final" | "Semi Final" | "Final";
+  group: "A" | "B" | "C" | null;
+  matchDate: string;
+}
+
+export interface GroupStanding {
+  teamId: string;
+  clubName: string;
+  logoUrl: string;
+  played: number;
+  won: number;
+  drawn: number;
+  lost: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  goalDifference: number;
+  points: number;
 }

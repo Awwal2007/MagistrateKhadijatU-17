@@ -5,6 +5,7 @@ import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
 import { PlayerForm } from "../components/PlayerForm.js";
 import { OfficialForm } from "../components/OfficialForm.js";
+import { TournamentHub } from "../components/TournamentHub.js";
 import tournamentLogo from "../assets/logo.jpeg";
 
 export const ClubPortal: React.FC = () => {
@@ -21,6 +22,7 @@ export const ClubPortal: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [errorOnLoad, setErrorOnLoad] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"roster" | "tournament">("roster");
 
   // Form modals state
   const [showPlayerModal, setShowPlayerModal] = useState<"Under-17" | "Free Age" | null>(null);
@@ -174,8 +176,36 @@ export const ClubPortal: React.FC = () => {
           </div>
         )}
 
-        {/* PROFILE ATTRIBUTION HUD */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-200/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
+        {/* TABS */}
+        <div className="flex gap-2 no-print overflow-x-auto pb-1">
+          <button
+            onClick={() => setActiveTab("roster")}
+            className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
+              activeTab === "roster"
+                ? 'bg-[#0a3d0a] text-[#FFD700] shadow-sm'
+                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            Roster Control
+          </button>
+          <button
+            onClick={() => setActiveTab("tournament")}
+            className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
+              activeTab === "tournament"
+                ? 'bg-[#0a3d0a] text-[#FFD700] shadow-sm'
+                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            Matches & Standings
+          </button>
+        </div>
+
+        {activeTab === "tournament" && authToken ? (
+          <TournamentHub authToken={authToken} />
+        ) : (
+          <>
+            {/* PROFILE ATTRIBUTION HUD */}
+            <div className="bg-white rounded-3xl p-6 border border-slate-200/60 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col md:flex-row items-center gap-5 text-center md:text-left">
             <img 
               src={currentTeam?.logoUrl || "/placeholder-logo.png"} 
@@ -224,10 +254,10 @@ export const ClubPortal: React.FC = () => {
           <div className="bg-white p-3 rounded-xl border border-slate-200">
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm font-bold text-slate-700">Overage (Free Age)</span>
-              <span className="text-xs text-slate-400 font-bold">/ 5 Limit</span>
+              <span className="text-xs text-slate-400 font-bold">/ 6 Limit</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2">
-              <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${(freeAgeCount/5)*100}%` }} />
+              <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: `${(freeAgeCount/6)*100}%` }} />
             </div>
           </div>
 
@@ -259,7 +289,7 @@ export const ClubPortal: React.FC = () => {
                   + Add Under-17 Player
                 </button>
               )}
-              {freeAgeCount < 5 && (
+              {freeAgeCount < 6 && (
                 <button
                   onClick={() => setShowPlayerModal("Free Age")}
                   className="py-1.5 px-3.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition uppercase flex items-center gap-1 shadow-sm"
@@ -283,7 +313,7 @@ export const ClubPortal: React.FC = () => {
                     + Add Under-17 Player
                   </button>
                 )}
-                {freeAgeCount < 5 && (
+                {freeAgeCount < 6 && (
                   <button
                     onClick={() => setShowPlayerModal("Free Age")}
                     className="text-xs text-amber-600 font-bold hover:underline"
@@ -390,7 +420,8 @@ export const ClubPortal: React.FC = () => {
             </div>
           )}
         </div>
-
+        </>
+        )}
       </div>
 
       {/* COMPACT PRINT VIEW (DIRECT PRINT EMULATION OUTPUT VIA @MEDIA PRINT GRIDDING) */}
