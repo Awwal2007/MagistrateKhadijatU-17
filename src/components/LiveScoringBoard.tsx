@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Match, Player } from "../types.js";
 import {
-  Play, Square, Trash2, Plus, RefreshCw, TrendingUp, Zap, Trophy, Clock
+  Play, Square, Trash2, Plus, RefreshCw, TrendingUp, Zap, Trophy, Clock, AlertTriangle
 } from "lucide-react";
 
 interface LiveScoringBoardProps {
@@ -26,6 +26,15 @@ interface Goal {
   timestamp?: string | Date;
 }
 
+interface Card {
+  team: "home" | "away";
+  type: "Yellow" | "Red";
+  playerName: string;
+  playerId: string;
+  jerseyNumber?: number;
+  timestamp?: string | Date;
+}
+
 export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
   match,
   homeTeamPlayers,
@@ -36,8 +45,14 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
   const [isLive, setIsLive] = useState(match.status === "Live");
   const [homeSelectedPlayer, setHomeSelectedPlayer] = useState("");
   const [awaySelectedPlayer, setAwaySelectedPlayer] = useState("");
+  const [homeSelectedCardPlayer, setHomeSelectedCardPlayer] = useState("");
+  const [awaySelectedCardPlayer, setAwaySelectedCardPlayer] = useState("");
+  const [homeCardType, setHomeCardType] = useState<"Yellow" | "Red">("Yellow");
+  const [awayCardType, setAwayCardType] = useState<"Yellow" | "Red">("Yellow");
   const [recordingGoal, setRecordingGoal] = useState<"home" | "away" | null>(null);
+  const [recordingCard, setRecordingCard] = useState<"home" | "away" | null>(null);
   const [goals, setGoals] = useState<Goal[]>(match.goals || []);
+  const [cards, setCards] = useState<Card[]>(match.cards || []);
   const [homeGoalScorers, setHomeGoalScorers] = useState<GoalScorer[]>([]);
   const [awayGoalScorers, setAwayGoalScorers] = useState<GoalScorer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,6 +61,11 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
   useEffect(() => {
     calculateGoalScorers();
   }, [goals]); // Remove dependencies that cause unnecessary recalculations
+
+  useEffect(() => {
+    setGoals(match.goals || []);
+    setCards(match.cards || []);
+  }, [match]);
 
   const calculateGoalScorers = () => {
     const homeScorers: Record<string, number> = {};
@@ -91,6 +111,7 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
       const data = await res.json();
       setIsLive(true);
       setGoals([]);
+      setCards([]);
       onMatchUpdated(data.match);
     } catch (err: any) {
       console.error("Start live error:", err);
@@ -216,6 +237,83 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
     }
   };
 
+  const handleRecordCard = async (team: "home" | "away") => {
+    const selectedPlayerId = team === "home" ? homeSelectedCardPlayer : awaySelectedCardPlayer;
+    const cardType = team === "home" ? homeCardType : awayCardType;
+    if (!selectedPlayerId) {
+      alert("Please select a player");
+      return;
+    }
+
+    const player = team === "home"
+      ? homeTeamPlayers.find(p => p._id === selectedPlayerId)
+      : awayTeamPlayers.find(p => p._id === selectedPlayerId);
+
+    if (!player) {
+      alert("Player not found");
+      return;
+    }
+
+    setRecordingCard(team);
+    setError(null);
+    
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/record-card`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          Authorization: `Bearer ${authToken}` 
+        },
+        body: JSON.stringify({
+          playerId: player._id,
+          playerName: player.name,
+          jerseyNumber: player.jerseyNumber,
+          team,
+          type: cardType,
+          timestamp: new Date().toISOString()
+        })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to record card");
+      }
+      
+      const data = await res.json();
+      onMatchUpdated(data.match);
+      
+      if (team === "home") setHomeSelectedCardPlayer("");
+      else setAwaySelectedCardPlayer("");
+    } catch (err: any) {
+      console.error("Record card error:", err);
+      setError(err.message);
+      alert(err.message);
+    } finally {
+      setRecordingCard(null);
+    }
+  };
+
+  const handleRemoveCard = async (index: number) => {
+    if (!window.confirm("Remove this card?")) return;
+    setError(null);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/card/${index}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to remove card");
+      }
+      const data = await res.json();
+      onMatchUpdated(data.match);
+    } catch (err: any) {
+      console.error("Remove card error:", err);
+      setError(err.message);
+      alert(err.message);
+    }
+  };
+
   const homeScore = goals.filter(g => g.team === "home").length;
   const awayScore = goals.filter(g => g.team === "away").length;
 
@@ -276,14 +374,32 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
         </div>
 
         {/* LIVE SCORE DISPLAY */}
-        <div className="flex items-center justify-center gap-6 py-6 bg-white rounded-2xl border border-slate-200">
-          <div className="text-center">
-            <div className="text-sm font-bold text-slate-500 uppercase mb-2">Home</div>
+        <div className="flex items-center justify-between gap-4 py-8 px-6 bg-white rounded-2xl border border-slate-200">
+          <div className="text-center flex flex-col items-center gap-2 flex-1 min-w-0">
+            <img 
+              src={match.homeTeamLogo || "/placeholder-logo.png"} 
+              alt={match.homeTeamName} 
+              className="w-16 h-16 rounded-full object-cover border-2 border-slate-100 shadow-sm bg-slate-50"
+              onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=80&q=80"; }}
+            />
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate w-full">
+              {match.homeTeamName || "Home Team"}
+            </div>
             <div className="text-6xl font-black text-emerald-600">{homeScore}</div>
           </div>
-          <div className="text-3xl font-black text-slate-300">:</div>
-          <div className="text-center">
-            <div className="text-sm font-bold text-slate-500 uppercase mb-2">Away</div>
+
+          <div className="text-4xl font-black text-slate-200 px-4 self-center select-none">VS</div>
+
+          <div className="text-center flex flex-col items-center gap-2 flex-1 min-w-0">
+            <img 
+              src={match.awayTeamLogo || "/placeholder-logo.png"} 
+              alt={match.awayTeamName} 
+              className="w-16 h-16 rounded-full object-cover border-2 border-slate-100 shadow-sm bg-slate-50"
+              onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=80&q=80"; }}
+            />
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate w-full">
+              {match.awayTeamName || "Away Team"}
+            </div>
             <div className="text-6xl font-black text-blue-600">{awayScore}</div>
           </div>
         </div>
@@ -302,7 +418,14 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
           <div className="grid grid-cols-2 gap-4">
             {/* HOME TEAM GOAL RECORDING */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-              <h4 className="font-bebas text-lg text-emerald-700 uppercase tracking-wider">Record Home Goal</h4>
+              <div className="flex items-center gap-2">
+                <img 
+                  src={match.homeTeamLogo || "/placeholder-logo.png"} 
+                  alt="Home Logo" 
+                  className="w-6 h-6 rounded-full object-cover border border-slate-100"
+                />
+                <h4 className="font-bebas text-lg text-emerald-700 uppercase tracking-wider truncate">Record {match.homeTeamName || 'Home'} Goal</h4>
+              </div>
               {homeTeamPlayers.length === 0 ? (
                 <div className="w-full text-center py-3 text-xs text-slate-400 bg-slate-50 rounded-xl">
                   No players available
@@ -333,7 +456,14 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
 
             {/* AWAY TEAM GOAL RECORDING */}
             <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
-              <h4 className="font-bebas text-lg text-blue-700 uppercase tracking-wider">Record Away Goal</h4>
+              <div className="flex items-center gap-2">
+                <img 
+                  src={match.awayTeamLogo || "/placeholder-logo.png"} 
+                  alt="Away Logo" 
+                  className="w-6 h-6 rounded-full object-cover border border-slate-100"
+                />
+                <h4 className="font-bebas text-lg text-blue-700 uppercase tracking-wider truncate">Record {match.awayTeamName || 'Away'} Goal</h4>
+              </div>
               {awayTeamPlayers.length === 0 ? (
                 <div className="w-full text-center py-3 text-xs text-slate-400 bg-slate-50 rounded-xl">
                   No players available
@@ -359,6 +489,93 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
               >
                 {recordingGoal === "away" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 {recordingGoal === "away" ? "Recording..." : "Record Goal"}
+              </button>
+            </div>
+          </div>
+
+          {/* DISCIPLINARY CARDS RECORDING SECTION */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* HOME TEAM CARD RECORDING */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <img 
+                  src={match.homeTeamLogo || "/placeholder-logo.png"} 
+                  alt="Home Logo" 
+                  className="w-6 h-6 rounded-full object-cover border border-slate-100"
+                />
+                <h4 className="font-bebas text-lg text-emerald-700 uppercase tracking-wider truncate">Record {match.homeTeamName || 'Home'} Card</h4>
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={homeSelectedCardPlayer}
+                  onChange={(e) => setHomeSelectedCardPlayer(e.target.value)}
+                  className="flex-1 text-xs py-2 px-3 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="">Select Player</option>
+                  {homeTeamPlayers.map(p => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} (#{p.jerseyNumber || 'N/A'})
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={homeCardType}
+                  onChange={(e) => setHomeCardType(e.target.value as any)}
+                  className="w-24 text-xs py-2 px-3 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="Yellow">Yellow</option>
+                  <option value="Red">Red</option>
+                </select>
+              </div>
+              <button
+                onClick={() => handleRecordCard("home")}
+                disabled={!homeSelectedCardPlayer || recordingCard === "home" || homeTeamPlayers.length === 0 || loading}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {recordingCard === "home" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <AlertTriangle className={`h-4 w-4 ${homeCardType === 'Yellow' ? 'text-yellow-400' : 'text-red-500'}`} />}
+                {recordingCard === "home" ? "Recording..." : `Record ${homeCardType} Card`}
+              </button>
+            </div>
+
+            {/* AWAY TEAM CARD RECORDING */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <img 
+                  src={match.awayTeamLogo || "/placeholder-logo.png"} 
+                  alt="Away Logo" 
+                  className="w-6 h-6 rounded-full object-cover border border-slate-100"
+                />
+                <h4 className="font-bebas text-lg text-blue-700 uppercase tracking-wider truncate">Record {match.awayTeamName || 'Away'} Card</h4>
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={awaySelectedCardPlayer}
+                  onChange={(e) => setAwaySelectedCardPlayer(e.target.value)}
+                  className="flex-1 text-xs py-2 px-3 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="">Select Player</option>
+                  {awayTeamPlayers.map(p => (
+                    <option key={p._id} value={p._id}>
+                      {p.name} (#{p.jerseyNumber || 'N/A'})
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={awayCardType}
+                  onChange={(e) => setAwayCardType(e.target.value as any)}
+                  className="w-24 text-xs py-2 px-3 border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="Yellow">Yellow</option>
+                  <option value="Red">Red</option>
+                </select>
+              </div>
+              <button
+                onClick={() => handleRecordCard("away")}
+                disabled={!awaySelectedCardPlayer || recordingCard === "away" || awayTeamPlayers.length === 0 || loading}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-900 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {recordingCard === "away" ? <RefreshCw className="h-4 w-4 animate-spin" /> : <AlertTriangle className={`h-4 w-4 ${awayCardType === 'Yellow' ? 'text-yellow-400' : 'text-red-500'}`} />}
+                {recordingCard === "away" ? "Recording..." : `Record ${awayCardType} Card`}
               </button>
             </div>
           </div>
@@ -393,6 +610,43 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
                       onClick={() => handleRemoveGoal(idx)}
                       className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
                       title="Remove Goal"
+                      disabled={loading}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* CARDS TIMELINE */}
+          {cards.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-5">
+              <h4 className="font-bebas text-lg text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" /> Disciplinary Timeline
+              </h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {cards.map((card, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-center justify-between p-3 rounded-xl border-2 ${
+                      card.type === "Red" ? "bg-red-50 border-red-200" : "bg-yellow-50 border-yellow-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={`w-3 h-4 rounded-sm ${card.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} shadow-sm`}></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-slate-800 text-sm">
+                          {card.playerName} {card.jerseyNumber && <span className="text-xs text-slate-500"># {card.jerseyNumber}</span>}
+                        </p>
+                        <p className="text-[10px] text-slate-500">{formatTime(card.timestamp)}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveCard(idx)}
+                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+                      title="Remove Card"
                       disabled={loading}
                     >
                       <Trash2 className="h-4 w-4" />

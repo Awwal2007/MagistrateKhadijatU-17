@@ -52,6 +52,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   const [newMatchHome,  setNewMatchHome]  = useState("");
   const [newMatchAway,  setNewMatchAway]  = useState("");
   const [newMatchStage, setNewMatchStage] = useState<"Group Stage" | "Quarter Final" | "Semi Final" | "Final">("Group Stage");
+  const [newMatchRound, setNewMatchRound] = useState("");
   const [newMatchGroup, setNewMatchGroup] = useState<"A" | "B" | "C" | "">("");
   const [newMatchDate,  setNewMatchDate]  = useState("");
   const [newMatchTime,  setNewMatchTime]  = useState("");
@@ -76,6 +77,15 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
     }
   };
 
+  // Helper function to format date and time
+  const formatMatchDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    };
+  };
+
   const handleUpdateGroup = async (teamId: string, group: string) => {
     setSyncing(true);
     try {
@@ -85,7 +95,6 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
         body: JSON.stringify({ group: group === "" ? null : group })
       });
       if (!res.ok) throw new Error("Failed to update group");
-      // Wait a moment for the API to complete, then refresh
       setTimeout(() => {
         onRefreshTeams();
         setSyncing(false);
@@ -109,11 +118,12 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
         body: JSON.stringify({
           homeTeamId: newMatchHome, awayTeamId: newMatchAway,
           stage: newMatchStage, group: newMatchGroup === "" ? null : newMatchGroup,
+          round: newMatchRound === "" ? null : newMatchRound,
           matchDate
         })
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.message || "Failed to schedule match"); }
-      setNewMatchHome(""); setNewMatchAway(""); setNewMatchDate(""); setNewMatchTime("");
+      setNewMatchHome(""); setNewMatchAway(""); setNewMatchDate(""); setNewMatchTime(""); setNewMatchRound("");
       setActiveSection("matches");
       loadMatches();
     } catch (err: any) {
@@ -320,16 +330,18 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                       const isCompleted = match.status === "Completed";
                       const homeWins = isCompleted && match.homeScore !== null && match.awayScore !== null && match.homeScore > match.awayScore;
                       const awayWins = isCompleted && match.homeScore !== null && match.awayScore !== null && match.awayScore > match.homeScore;
+                      const { date, time } = formatMatchDateTime(match.matchDate);
 
                       return (
                         <div key={match._id} className={`px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors ${isCompleted ? "bg-emerald-50/30" : "hover:bg-slate-50/60"}`}>
 
-                          {/* Left: meta badges */}
-                          <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[160px]">
+                          {/* Left: meta badges with TIME */}
+                          <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
                             <div className="flex flex-col gap-1.5">
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border ${sc.border} ${sc.bg} ${sc.text}`}>
                                   {stage === "Group Stage" && match.group ? `Grp ${match.group}` : stage}
+                                  {match.round ? ` - ${match.round}` : ''}
                                 </span>
                                 <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
                                   isCompleted
@@ -340,10 +352,12 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                                   {isCompleted ? "FT" : "Scheduled"}
                                 </span>
                               </div>
-                              <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                              <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
                                 <Calendar className="h-3 w-3" />
-                                {new Date(match.matchDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
-                              </span>
+                                <span>{date}</span>
+                                <Clock className="h-3 w-3 ml-1" />
+                                <span className="font-mono font-semibold text-slate-500">{time}</span>
+                              </div>
                             </div>
                           </div>
 
@@ -502,7 +516,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                             <th className="text-center py-2 w-9">GA</th>
                             <th className="text-center py-2 w-11">GD</th>
                             <th className="text-center pr-4 py-2 w-11 font-black text-slate-600">Pts</th>
-                          </tr>
+                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                           {standings.map((row, i) => (
@@ -564,7 +578,6 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                       gc ? `${gc.cardBg} ${gc.cardBorder}` : "bg-white border-slate-200"
                     }`}
                   >
-                    {/* Allocated checkmark badge */}
                     {gc && (
                       <span className={`absolute top-3 right-3 flex items-center gap-1 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${gc.bg} ${gc.text}`}>
                         <CheckCircle className="h-3 w-3" />
@@ -616,7 +629,6 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
             </div>
           )}
 
-          {/* ── STANDINGS per group, shown below the allocation cards ── */}
           {teams.some(t => t.group) && (
             <div className="border-t border-slate-100 px-6 pb-6 pt-4 space-y-4">
               <div className="flex items-center gap-2 mb-1">
@@ -649,7 +661,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                             <th className="text-center py-2 w-9">GA</th>
                             <th className="text-center py-2 w-11">GD</th>
                             <th className="text-center pr-4 py-2 w-11 font-black text-slate-600">Pts</th>
-                          </tr>
+                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                           {standings.map((row, i) => (
@@ -723,6 +735,26 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                   <option value="B">Group B</option>
                   <option value="C">Group C</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Round <span className="text-slate-300">(optional)</span></label>
+                <input
+                  list="rounds-list"
+                  type="text"
+                  placeholder="e.g. Round 1"
+                  value={newMatchRound}
+                  onChange={(e) => setNewMatchRound(e.target.value)}
+                  className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50 focus:outline-none focus:border-[#0a3d0a] focus:ring-1 focus:ring-[#0a3d0a]"
+                />
+                <datalist id="rounds-list">
+                  <option value="Round 1" />
+                  <option value="Round 2" />
+                  <option value="Round 3" />
+                  <option value="Round 4" />
+                  <option value="Quarter Finals" />
+                  <option value="Semi Finals" />
+                  <option value="Finals" />
+                </datalist>
               </div>
             </div>
 

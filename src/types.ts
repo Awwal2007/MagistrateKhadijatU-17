@@ -44,6 +44,7 @@ export interface Match {
   awayScore: number | null;
   status: "Scheduled" | "Live" | "Completed";
   stage: "Group Stage" | "Quarter Final" | "Semi Final" | "Final";
+  round?: string;
   group: "A" | "B" | "C" | null;
   matchDate: string;
   goals?: Array<{
@@ -51,6 +52,14 @@ export interface Match {
     playerName: string;
     jerseyNumber: number;
     team: "home" | "away";
+    timestamp: string;
+  }>;
+  cards?: Array<{
+    playerId: string;
+    playerName: string;
+    jerseyNumber: number;
+    team: "home" | "away";
+    type: "Yellow" | "Red";
     timestamp: string;
   }>;
 }
