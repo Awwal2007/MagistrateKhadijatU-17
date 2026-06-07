@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { LogOut, Printer, Users, UserCheck, ShieldAlert, BadgeCheck, AlertCircle, RefreshCw, Layers, Zap, Clock, Eye } from "lucide-react";
+import { LogOut, Printer, Users, UserCheck, ShieldAlert, BadgeCheck, AlertCircle, RefreshCw, Layers, Zap, Clock, Eye, Share2 } from "lucide-react";
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
 import { PlayerForm } from "../components/PlayerForm.js";
@@ -218,9 +218,17 @@ const MatchCenter: React.FC<{
             </div>
 
             {loadingPlayers ? (
-              <div className="aspect-[3/4] bg-slate-50 rounded-[2rem] flex flex-col items-center justify-center gap-3">
-                <RefreshCw className="h-8 w-8 text-[#0a3d0a] animate-spin" />
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Compiling Tactical Records...</p>
+              <div className="aspect-[3/4] bg-emerald-700/10 border-4 border-white/20 rounded-[2.5rem] flex flex-col justify-around p-8 animate-pulse">
+                 <div className="flex justify-around">
+                   <div className="w-12 h-12 rounded-full bg-slate-200" /><div className="w-12 h-12 rounded-full bg-slate-200" />
+                 </div>
+                 <div className="flex justify-around">
+                   <div className="w-12 h-12 rounded-full bg-slate-200" /><div className="w-12 h-12 rounded-full bg-slate-200" /><div className="w-12 h-12 rounded-full bg-slate-200" /><div className="w-12 h-12 rounded-full bg-slate-200" />
+                 </div>
+                 <div className="flex justify-around">
+                   <div className="w-12 h-12 rounded-full bg-slate-200" /><div className="w-12 h-12 rounded-full bg-slate-200" /><div className="w-12 h-12 rounded-full bg-slate-200" /><div className="w-12 h-12 rounded-full bg-slate-200" />
+                 </div>
+                 <div className="flex justify-center"><div className="w-12 h-12 rounded-full bg-slate-200" /></div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -381,7 +389,7 @@ const LineupEditor: React.FC<{
             className="flex-[2] py-3 bg-[#0a3d0a] text-[#FFD700] rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {isSaving && <RefreshCw className="h-3 w-3 animate-spin" />}
-            {isSaving ? "DEPLOYING..." : "Deploy Lineup"}
+            {isSaving ? "Loading..." : "Add Lineup"}
           </button>
         </div>
       </div>
@@ -468,6 +476,13 @@ export const ClubPortal: React.FC = () => {
   const [showOfficialModal, setShowOfficialModal] = useState(false);
   const [selectedMatchForLineup, setSelectedMatchForLineup] = useState<Match | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const handleCopyLivescore = () => {
+    const url = `${window.location.origin}/#/livescore`;
+    navigator.clipboard.writeText(url).then(() => {
+      alert("Public livescore link copied to clipboard!");
+    });
+  };
 
   useEffect(() => {
     if (!authToken || !currentTeam) {
@@ -634,6 +649,13 @@ export const ClubPortal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2.5">
+            <button
+              onClick={handleCopyLivescore}
+              className="text-[10px] font-bold uppercase tracking-wider bg-[#FFD700] text-[#0a3d0a] px-3 py-1.5 rounded-lg border border-white/10 transition flex items-center gap-1.5 shadow-sm hover:brightness-110"
+            >
+              <Share2 className="h-3 w-3" />
+              Copy Livescore Link
+            </button>
             <button
               onClick={logout}
               className="text-[10px] font-bold uppercase tracking-wider bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg border border-white/5 transition flex items-center gap-1 text-slate-200"
@@ -939,7 +961,7 @@ export const ClubPortal: React.FC = () => {
                     onClick={() => setShowOfficialModal(true)}
                     className="py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition uppercase flex items-center justify-center gap-1 shadow-sm"
                   >
-                    + Append Official
+                    + Add Official
                   </button>
                 )}
               </div>

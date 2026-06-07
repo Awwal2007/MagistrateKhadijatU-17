@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Shield, Key, AlertCircle, RefreshCw, Trash2, Printer, Search,
   ArrowLeft, LogOut, ChevronRight, Users, UserCheck, Building2,
-  Trophy, TrendingUp, Eye, Zap, Clock
+  Trophy, TrendingUp, Eye, Zap, Clock, Share2
 } from "lucide-react";
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
@@ -195,6 +195,18 @@ export const AdminPage: React.FC = () => {
     onConfirm?: () => void;
     isDangerous?: boolean;
   }>({ isOpen: false, title: "", message: "", type: "info" });
+
+  const handleCopyLivescore = () => {
+    const url = `${window.location.origin}/#/livescore`;
+    navigator.clipboard.writeText(url).then(() => {
+      setModalConfig({
+        isOpen: true,
+        title: "Link Copied",
+        message: "The public livescore link has been copied to your clipboard.",
+        type: "success"
+      });
+    });
+  };
 
   useEffect(() => {
     if (isAdmin && authToken) {
@@ -483,6 +495,13 @@ export const AdminPage: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
+              onClick={handleCopyLivescore}
+              className="py-1.5 px-3 bg-[#FFD700] hover:bg-yellow-400 text-[#0a3d0a] rounded-lg text-[10px] uppercase font-bold transition flex items-center gap-1.5 shadow-sm"
+            >
+              <Share2 className="h-3 w-3" />
+              Copy Livescore
+            </button>
+            <button
               onClick={loadAdminRecords}
               className="py-1.5 px-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg text-[10px] text-slate-200 uppercase font-semibold transition flex items-center gap-1"
             >
@@ -580,9 +599,10 @@ export const AdminPage: React.FC = () => {
 
             {/* TEAM LIST */}
             {loadingRecords ? (
-              <div className="py-10 text-center flex flex-col items-center gap-2">
-                <RefreshCw className="h-5 w-5 text-[#0a3d0a] animate-spin" />
-                <span className="text-[10px] text-gray-400">Fetching rosters...</span>
+              <div className="space-y-2 animate-pulse">
+                {[1, 2, 3, 4, 5, 6].map(i => (
+                  <div key={i} className="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl" />
+                ))}
               </div>
             ) : filteredTeams.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-xs">

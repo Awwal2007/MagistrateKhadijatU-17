@@ -448,9 +448,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     return (
       <div className="space-y-6 animate-fade-in">
         {loading && matches.length === 0 ? (
-          <div className="py-20 text-center flex flex-col items-center gap-3">
-            <RefreshCw className="h-8 w-8 text-[#0a3d0a] animate-spin" />
-            <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Synchronizing Match Schedule...</p>
+          <div className="space-y-8">
+            {[1, 2].map((i) => (
+              <div key={i} className="space-y-4 animate-pulse">
+                <div className="h-8 w-40 bg-slate-200 rounded-xl mb-4" />
+                {[1, 2, 3].map((j) => (
+                  <div key={j} className="h-32 bg-white border border-slate-100 rounded-3xl shadow-sm" />
+                ))}
+              </div>
+            ))}
           </div>
         ) : error ? (
            <div className="py-12 text-center text-red-500 bg-red-50 rounded-3xl border border-red-100 px-6">
@@ -587,9 +593,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
       {loading && matches.length === 0 ? (
-        <div className="py-20 text-center flex flex-col items-center gap-3">
-          <RefreshCw className="h-8 w-8 text-[#0a3d0a] animate-spin" />
-          <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Loading Tournament Records...</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-pulse">
+          <div className="lg:col-span-2 space-y-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-64 bg-white border border-slate-200 rounded-[2.5rem] shadow-sm" />
+            ))}
+          </div>
+          <div className="space-y-6">
+            <div className="h-96 bg-white border border-slate-200 rounded-[2.5rem] shadow-sm" />
+          </div>
         </div>
       ) : error ? (
         <div className="py-12 text-center text-red-500 bg-red-50 rounded-3xl border border-red-100 px-6">

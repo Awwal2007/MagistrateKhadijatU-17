@@ -364,9 +364,10 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
       {activeSection === "matches" && (
         <div className="space-y-6">
           {loading ? (
-            <div className="bg-white rounded-3xl p-16 text-center border border-slate-200/60 flex flex-col items-center gap-3">
-              <RefreshCw className="h-7 w-7 text-[#0a3d0a] animate-spin" />
-              <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Loading fixtures...</span>
+            <div className="space-y-4 animate-pulse">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-28 bg-white rounded-3xl border border-slate-100 shadow-xs" />
+              ))}
             </div>
           ) : matches.length === 0 ? (
             <div className="bg-white rounded-3xl p-16 text-center border border-dashed border-slate-200">
