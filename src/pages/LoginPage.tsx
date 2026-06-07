@@ -24,13 +24,11 @@ export const LoginPage: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: username.trim(), password })
       });
-
+      const data = await response.json();
       if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || "Invalid username or password credentials.");
+        throw new Error(data.message || "Invalid username or password credentials.");
       }
 
-      const data = await response.json();
       loginTeam(data.token, data.team);
       
       // Send them to the roster dashboard

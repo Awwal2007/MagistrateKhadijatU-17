@@ -142,11 +142,10 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
         method: "POST",
         headers: { Authorization: `Bearer ${authToken}` }
       });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to start live");
-      }
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to start live");
+      }
       setIsLive(true);
       setMatchTime(0);
       setIsTimerRunning(true);
@@ -177,11 +176,10 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
             method: "POST",
             headers: { Authorization: `Bearer ${authToken}` }
           });
-          if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || "Failed to end match");
-          }
           const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.message || "Failed to end match");
+          }
           setIsLive(false);
           setIsTimerRunning(false);
           onMatchUpdated(data.match);
@@ -233,12 +231,11 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
         })
       });
       
+      const data = await res.json();
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to record goal");
+        throw new Error(data.message || "Failed to record goal");
       }
       
-      const data = await res.json();
       // Ensure goals array exists and has timestamp
       const updatedGoals = (data.match.goals || []).map((goal: any) => ({
         ...goal,
@@ -271,23 +268,25 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
       type: "confirm",
       isDangerous: true,
       onConfirm: async () => {
+        setLoading(true);
         setError(null);
         try {
           const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/goal/${index}`, {
             method: "DELETE",
             headers: { Authorization: `Bearer ${authToken}` }
           });
-          if (!res.ok) {
-            const errorData = await res.json().catch(() => ({}));
-            throw new Error(errorData.message || "Failed to remove goal");
-          }
           const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.message || "Failed to remove goal");
+          }
           setGoals(data.match.goals || []);
           onMatchUpdated(data.match);
         } catch (err: any) {
           console.error("Remove goal error:", err);
           setError(err.message);
           setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
+        } finally {
+          setLoading(false);
         }
       }
     });
@@ -332,12 +331,11 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
         })
       });
       
+      const data = await res.json();
       if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to record card");
+        throw new Error(data.message || "Failed to record card");
       }
       
-      const data = await res.json();
       onMatchUpdated(data.match);
       
       if (team === "home") setHomeSelectedCardPlayer("");
@@ -353,22 +351,24 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
 
   const handleRemoveCard = async (index: number) => {
     if (!window.confirm("Remove this card?")) return;
+    setLoading(true);
     setError(null);
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/card/${index}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${authToken}` }
       });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to remove card");
-      }
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to remove card");
+      }
       onMatchUpdated(data.match);
     } catch (err: any) {
       console.error("Remove card error:", err);
       setError(err.message);
-      alert(err.message);
+      setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -740,7 +740,7 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
                       title="Remove Goal"
                       disabled={loading}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                     </button>
                   </div>
                 ))}
@@ -777,7 +777,7 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
                       title="Remove Card"
                       disabled={loading}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                     </button>
                   </div>
                 ))}

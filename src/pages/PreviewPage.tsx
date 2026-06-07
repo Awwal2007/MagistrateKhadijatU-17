@@ -62,13 +62,11 @@ export const PreviewPage: React.FC = () => {
           logo: draftLogo
         })
       });
-
+      const teamData = await registerRes.json();
       if (!registerRes.ok) {
-        const errData = await registerRes.json();
-        throw new Error(errData.message || "Failed to create core club registration profile.");
+        throw new Error(teamData.message || "Failed to create core club registration profile.");
       }
 
-      const teamData = await registerRes.json();
       const { token, team } = teamData;
       const teamId = team.id;
 

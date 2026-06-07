@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { LogOut, Printer, Users, UserCheck, ShieldAlert, BadgeCheck, AlertCircle, RefreshCw, Layers, Zap, Clock } from "lucide-react";
+import { LogOut, Printer, Users, UserCheck, ShieldAlert, BadgeCheck, AlertCircle, RefreshCw, Layers, Zap, Clock, Eye } from "lucide-react";
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
 import { PlayerForm } from "../components/PlayerForm.js";
 import { OfficialForm } from "../components/OfficialForm.js";
 import { TournamentHub } from "../components/TournamentHub.js";
-import { Match } from "../types.js";
+import { Match, Player } from "../types.js";
 import tournamentLogo from "../assets/logo.jpeg";
 
 const FORMATIONS: Record<string, { def: number; mid: number; fwd: number }> = {
@@ -77,6 +77,373 @@ const LiveMarquee: React.FC<{ matches: Match[] }> = ({ matches }) => {
   );
 };
 
+const LineupPitchDisplay: React.FC<{
+  lineup: { formation: string; starting11: string[]; bench: string[] };
+  rosterPlayers: Player[];
+  getPlayerStats: (id: string) => { goals: number; cards: any[] };
+}> = ({ lineup, rosterPlayers, getPlayerStats }) => {
+  const formation = lineup.formation || "4-4-2";
+  const config = FORMATIONS[formation] || FORMATIONS["4-4-2"];
+
+  const renderRow = (startIndex: number, count: number, label: string) => {
+    const items = [];
+    for (let i = 0; i < count; i++) {
+      const playerId = lineup.starting11[startIndex + i];
+      const p = rosterPlayers.find(player => player._id === playerId);
+      const stats = playerId ? getPlayerStats(playerId) : { goals: 0, cards: [] };
+
+      items.push(
+        <div key={i} className="flex flex-col items-center gap-1 group">
+          <div className="relative w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 border-white shadow-lg transition-transform group-hover:scale-110 bg-emerald-800">
+            <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+              {p && (p.photoUrl || p.photo) ? (
+                <img src={p.photoUrl || p.photo} alt={p.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-black text-xs sm:text-base">
+                  {p ? `#${p.jerseyNumber}` : "?"}
+                </span>
+              )}
+            </div>
+            <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
+              {stats.goals > 0 && Array(stats.goals).fill(0).map((_, gi) => (
+                <Zap key={gi} className="h-3 w-3 text-[#FFD700] fill-[#FFD700] drop-shadow-md" />
+              ))}
+              {stats.cards.map((c: any, ci: number) => (
+                <div key={ci} className={`w-1.5 h-2 rounded-xs ${c.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} border-[0.5px] border-white/20`} />
+              ))}
+            </div>
+          </div>
+          <span className="bg-black/40 backdrop-blur-md text-white text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter max-w-[70px] truncate text-center">
+            {p ? p.name.split(' ').pop() : label}
+          </span>
+        </div>
+      );
+    }
+    return <div className="flex justify-around items-center w-full z-10 min-h-[60px]">{items}</div>;
+  };
+
+  return (
+    <div className="relative aspect-[3/4] bg-emerald-600 rounded-[2rem] overflow-hidden border-4 border-white/20 p-4 flex flex-col justify-between shadow-xl">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-16 border-2 border-white/30 border-t-0 rounded-b-xl" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-16 border-2 border-white/30 border-b-0 rounded-t-xl" />
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-white/30 -translate-y-1/2" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full" />
+      </div>
+      {renderRow(1 + config.def + config.mid, config.fwd, "FWD")}
+      {renderRow(1 + config.def, config.mid, "MID")}
+      {renderRow(1, config.def, "DEF")}
+      {renderRow(0, 1, "GK")}
+    </div>
+  );
+};
+
+const MatchCenter: React.FC<{
+  match: Match;
+  onClose: () => void;
+  authToken: string;
+}> = ({ match, onClose, authToken }) => {
+  const [activeSide, setActiveSide] = useState<"home" | "away">("home");
+  const [matchPlayers, setMatchPlayers] = useState<Player[]>([]);
+  const [loadingPlayers, setLoadingPlayers] = useState(true);
+
+  useEffect(() => {
+    const fetchMatchPlayers = async () => {
+      setLoadingPlayers(true);
+      try {
+        const [homeRes, awayRes] = await Promise.all([
+          fetch(`${import.meta.env.VITE_API_URL || ""}/api/teams/${match.homeTeamId}/players`, { 
+            headers: { Authorization: `Bearer ${authToken}` } 
+          }),
+          fetch(`${import.meta.env.VITE_API_URL || ""}/api/teams/${match.awayTeamId}/players`, { 
+            headers: { Authorization: `Bearer ${authToken}` } 
+          })
+        ]);
+        const homeData = await homeRes.json();
+        const awayData = await awayRes.json();
+        setMatchPlayers([...(homeData.players || []), ...(awayData.players || [])]);
+      } catch (err) { console.error(err); }
+      finally { setLoadingPlayers(false); }
+    };
+    fetchMatchPlayers();
+  }, [match.homeTeamId, match.awayTeamId, authToken]);
+
+  const lineup = activeSide === "home" ? match.homeLineup : match.awayLineup;
+
+  const getPlayerStats = (playerId: string) => {
+    const playerGoals = match.goals?.filter(g => g.playerId === playerId).length || 0;
+    const playerCards = match.cards?.filter(c => c.playerId === playerId) || [];
+    return { goals: playerGoals, cards: playerCards };
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-scale-in">
+        <div className="green-mesh p-8 text-white relative flex items-center justify-between gap-6 border-b-4 border-[#FFD700]">
+          <div className="text-right flex-1">
+            <p className="text-xl font-bebas tracking-wider uppercase">{match.homeTeamName}</p>
+          </div>
+          <div className="bg-[#FFD700] text-[#0a3d0a] px-6 py-2 rounded-2xl font-black text-3xl shadow-lg border-2 border-white/20">
+            {match.homeScore ?? 0} : {match.awayScore ?? 0}
+          </div>
+          <div className="text-left flex-1">
+            <p className="text-xl font-bebas tracking-wider uppercase">{match.awayTeamName}</p>
+          </div>
+          <button onClick={onClose} className="absolute top-4 right-4 text-white/60 hover:text-white"><LogOut className="h-5 w-5 rotate-180" /></button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-10 custom-scrollbar">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Goal Timeline</h3>
+                <div className="space-y-2">
+                  {(match.goals || []).length === 0 && <p className="text-xs text-slate-300 italic">No goals recorded yet</p>}
+                  {match.goals?.map((g, i) => (
+                    <div key={i} className={`flex items-center gap-3 p-2 rounded-xl border ${g.team === 'home' ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'}`}>
+                      <Zap className={`h-3 w-3 ${g.team === 'home' ? 'text-emerald-600' : 'text-blue-600'}`} />
+                      <span className="text-xs font-bold text-slate-700">{g.playerName} <span className="opacity-50">#{g.jerseyNumber}</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Tactical Disciplinary</h3>
+                <div className="flex flex-wrap gap-2">
+                  {match.cards?.map((c, i) => (
+                    <div key={i} className={`h-6 w-4 rounded-sm border shadow-sm ${c.type === 'Red' ? 'bg-red-500 border-red-600' : 'bg-yellow-400 border-yellow-500'}`} title={`${c.playerName} (#${c.jerseyNumber})`} />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {loadingPlayers ? (
+              <div className="aspect-[3/4] bg-slate-50 rounded-[2rem] flex flex-col items-center justify-center gap-3">
+                <RefreshCw className="h-8 w-8 text-[#0a3d0a] animate-spin" />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Compiling Tactical Records...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex bg-slate-100 p-1 rounded-2xl">
+                  <button onClick={() => setActiveSide("home")} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeSide === "home" ? 'bg-white shadow-sm text-emerald-700' : 'text-slate-400'}`}>{match.homeTeamName}</button>
+                  <button onClick={() => setActiveSide("away")} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeSide === "away" ? 'bg-white shadow-sm text-emerald-700' : 'text-slate-400'}`}>{match.awayTeamName}</button>
+                </div>
+                {lineup ? <LineupPitchDisplay lineup={lineup} rosterPlayers={matchPlayers} getPlayerStats={getPlayerStats} /> : (
+                  <div className="aspect-[3/4] bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center text-slate-400 text-[10px] font-black uppercase">No Lineup Provided</div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LineupEditor: React.FC<{
+  match: Match;
+  rosterPlayers: Player[];
+  currentTeamId: string;
+  onSave: (matchId: string, formation: string, starting11: string[], bench: string[]) => void;
+  onCancel: () => void;
+}> = ({ match, rosterPlayers, currentTeamId, onSave, onCancel }) => {
+  const isHome = match.homeTeamId === currentTeamId;
+  const existingLineup = isHome ? match.homeLineup : match.awayLineup;
+
+  const [formation, setFormation] = useState(existingLineup?.formation || "4-4-2");
+  const [activeSlot, setActiveSlot] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const [tempStarting, setTempStarting] = useState<(string | null)[]>(() => {
+    const base = Array(11).fill(null);
+    if (existingLineup?.starting11) {
+      existingLineup.starting11.forEach((id, i) => { if (i < 11) base[i] = id; });
+    }
+    return base;
+  });
+  
+  const [tempBench, setTempBench] = useState<string[]>(existingLineup?.bench || []);
+
+  const config = FORMATIONS[formation];
+
+  const handlePlayerSelect = (playerId: string) => {
+    if (activeSlot !== null) {
+      const newStarting = [...tempStarting];
+      // Remove player from bench if they are being promoted to XI
+      setTempBench(prev => prev.filter(id => id !== playerId));
+      // If player is already in another slot, clear that old slot first
+      const existingSlot = newStarting.indexOf(playerId);
+      if (existingSlot !== -1) newStarting[existingSlot] = null;
+      
+      newStarting[activeSlot] = playerId;
+      setTempStarting(newStarting);
+      setActiveSlot(null);
+    } else {
+      const inStarting = tempStarting.includes(playerId);
+      if (inStarting) {
+        setTempStarting(prev => prev.map(id => id === playerId ? null : id));
+        if (!tempBench.includes(playerId)) setTempBench(prev => [...prev, playerId]);
+      } else if (tempBench.includes(playerId)) {
+        setTempBench(prev => prev.filter(id => id !== playerId));
+      } else {
+        setTempBench(prev => [...prev, playerId]);
+      }
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSave(match._id, formation, tempStarting.filter((id): id is string => id !== null), tempBench);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const renderPitchRow = (players: (string | null)[], startIndex: number, count: number, label: string) => {
+    const rowSlots = [];
+    for (let i = 0; i < count; i++) {
+      const slotIndex = startIndex + i;
+      const playerId = players[slotIndex];
+      const player = rosterPlayers.find(p => p._id === playerId);
+      const isActive = activeSlot === slotIndex;
+
+      rowSlots.push(
+        <button 
+          key={slotIndex}
+          type="button"
+          onClick={() => setActiveSlot(isActive ? null : slotIndex)}
+          className={`flex flex-col items-center gap-1 transition-transform hover:scale-110 ${isActive ? 'z-20' : 'z-10'}`}
+        >
+          <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 shadow-lg transition-all overflow-hidden ${
+            isActive ? 'bg-yellow-400 border-white ring-4 ring-yellow-400/30' : 
+            player ? 'bg-white border-emerald-800' : 'bg-emerald-800/40 border-dashed border-white/40'
+          }`}>
+            {player && (player.photoUrl || player.photo) ? (
+              <img src={player.photoUrl || player.photo} alt={player.name} className="w-full h-full object-cover" />
+            ) : (
+              player ? (
+                <span className="text-[10px] font-black text-emerald-900">
+                  #{player.jerseyNumber}
+                </span>
+              ) : (
+                <Zap className={`h-4 w-4 ${isActive ? 'text-white' : 'text-white/20'}`} />
+              )
+            )}
+          </div>
+          <span className={`text-[8px] font-black uppercase px-1.5 rounded truncate max-w-[60px] ${
+            isActive ? 'bg-yellow-400 text-emerald-900' : 
+            player ? 'bg-black/40 text-white' : 'bg-white/10 text-white/40'
+          }`}>
+            {player ? player.name.split(' ').pop() : label}
+          </span>
+        </button>
+      );
+    }
+    return <div className="flex justify-around items-center w-full min-h-[60px]">{rowSlots}</div>;
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="lg:col-span-5 space-y-4">
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Tactical Setup</label>
+            <select 
+              value={formation}
+              onChange={(e) => { setFormation(e.target.value); setTempStarting(Array(11).fill(null)); setActiveSlot(null); }}
+              className="w-full py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:ring-2 ring-emerald-500/20"
+            >
+              {Object.keys(FORMATIONS).map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+          </div>
+
+          <div className="relative aspect-[3/4] bg-emerald-600 rounded-[2rem] overflow-hidden border-4 border-white/20 p-4 flex flex-col justify-between">
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-16 border-2 border-white/10 border-t-0 rounded-b-xl" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-16 border-2 border-white/10 border-b-0 rounded-t-xl" />
+              <div className="absolute top-1/2 left-0 right-0 h-px bg-white/10 -translate-y-1/2" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 border-2 border-white/10 rounded-full" />
+            </div>
+            
+            {renderPitchRow(tempStarting, 1 + config.def + config.mid, config.fwd, "FWD")}
+            {renderPitchRow(tempStarting, 1 + config.def, config.mid, "MID")}
+            {renderPitchRow(tempStarting, 1, config.def, "DEF")}
+            {renderPitchRow(tempStarting, 0, 1, "GK")}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="flex-1 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest transition">Cancel</button>
+          <button 
+            onClick={handleSave} 
+            disabled={tempStarting.filter(id => id !== null).length !== 11 || isSaving}
+            className="flex-[2] py-3 bg-[#0a3d0a] text-[#FFD700] rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:brightness-110 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSaving && <RefreshCw className="h-3 w-3 animate-spin" />}
+            {isSaving ? "DEPLOYING..." : "Deploy Lineup"}
+          </button>
+        </div>
+      </div>
+
+      <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
+        <div className="border-b pb-4 flex justify-between items-end">
+          <div>
+            <h3 className="font-bebas text-2xl text-slate-800 tracking-wide uppercase">Roster Pool</h3>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              {activeSlot !== null ? `Assign player to slot #${activeSlot + 1}` : 'Manage bench and selections'}
+            </p>
+          </div>
+          {activeSlot !== null && (
+            <button onClick={() => setActiveSlot(null)} className="text-[9px] font-black text-amber-600 uppercase underline">Cancel Assignment</button>
+          )}
+        </div>
+        
+        <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+          {["Goalkeeper", "Defender", "Midfielder", "Forward"].map(pos => (
+            <div key={pos} className="space-y-3">
+              <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] border-l-2 border-emerald-500 pl-2">{pos}s</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {rosterPlayers.filter(p => p.position === pos).map(p => {
+                  const sIndex = tempStarting.indexOf(p._id);
+                  const isStarting = sIndex !== -1;
+                  const isBench = tempBench.includes(p._id);
+                  const isCurrentTarget = activeSlot !== null && tempStarting[activeSlot] === p._id;
+
+                  return (
+                    <button 
+                      key={p._id} 
+                      onClick={() => handlePlayerSelect(p._id)} 
+                      className={`p-3 rounded-xl border-2 text-left transition flex items-center justify-between gap-3 ${
+                        isCurrentTarget ? 'border-yellow-500 bg-yellow-50 ring-2 ring-yellow-500/20' :
+                        isStarting ? 'border-emerald-500 bg-emerald-50 opacity-60' : 
+                        isBench ? 'border-amber-400 bg-amber-50' : 
+                        'border-slate-100 bg-slate-50/50 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-black uppercase truncate text-slate-800">{p.name}</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase">#{p.jerseyNumber} • {p.position}</p>
+                      </div>
+                      <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${
+                        isStarting ? 'bg-emerald-500 text-white' : 
+                        isBench ? 'bg-amber-400 text-white' : 
+                        'bg-slate-200 text-slate-500'
+                      }`}>
+                        {isStarting ? "IN XI" : isBench ? "BENCH" : "ADD"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ClubPortal: React.FC = () => {
   const navigate = useNavigate();
   const {
@@ -94,6 +461,7 @@ export const ClubPortal: React.FC = () => {
   const [matches, setMatches] = useState<Match[]>([]);
   const [activeTab, setActiveTab] = useState<"roster" | "tournament" | "fixtures" | "lineup">("roster");
   const fixturesRef = useRef<HTMLDivElement>(null);
+  const [viewingMatch, setViewingMatch] = useState<Match | null>(null);
 
   // Form modals state
   const [showPlayerModal, setShowPlayerModal] = useState<"Under-17" | "Free Age" | null>(null);
@@ -169,7 +537,7 @@ export const ClubPortal: React.FC = () => {
       }
 
       await loadRoster();
-      setShowPlayerModal(false);
+      setShowPlayerModal(null);
     } catch (err: any) {
       setActionError(err.message);
     }
@@ -238,171 +606,6 @@ export const ClubPortal: React.FC = () => {
     } catch (err: any) {
       setActionError(err.message);
     }
-  };
-
-  // FIXED: Single, complete LineupEditor component
-  const LineupEditor = ({ match }: { match: Match }) => {
-    const isHome = match.homeTeamId === currentTeam?.id;
-    const existingLineup = isHome ? match.homeLineup : match.awayLineup;
-    const [formation, setFormation] = useState(existingLineup?.formation || "4-4-2");
-    const [tempStarting, setTempStarting] = useState<string[]>(existingLineup?.starting11 || []);
-    const [tempBench, setTempBench] = useState<string[]>(existingLineup?.bench || []);
-
-    const config = FORMATIONS[formation];
-    
-    const getPositionCounts = (starters: string[]) => {
-      return {
-        GK: starters.filter(id => rosterPlayers.find(p => p._id === id)?.position === "Goalkeeper").length,
-        DEF: starters.filter(id => rosterPlayers.find(p => p._id === id)?.position === "Defender").length,
-        MID: starters.filter(id => rosterPlayers.find(p => p._id === id)?.position === "Midfielder").length,
-        FWD: starters.filter(id => rosterPlayers.find(p => p._id === id)?.position === "Forward").length,
-      };
-    };
-
-    const counts = getPositionCounts(tempStarting);
-
-    const tryAddStarter = (player: any): boolean => {
-      if (tempStarting.length >= 11) return false;
-      
-      const pos = player.position;
-      if (pos === "Goalkeeper" && counts.GK >= 1) return false;
-      if (pos === "Defender" && counts.DEF >= config.def) return false;
-      if (pos === "Midfielder" && counts.MID >= config.mid) return false;
-      if (pos === "Forward" && counts.FWD >= config.fwd) return false;
-
-      setTempStarting([...tempStarting, player._id]);
-      return true;
-    };
-
-    const togglePlayer = (id: string) => {
-      const player = rosterPlayers.find(p => p._id === id);
-      if (!player) return;
-
-      if (tempStarting.includes(id)) {
-        // Move from starting to bench
-        setTempStarting(tempStarting.filter(pid => pid !== id));
-        if (!tempBench.includes(id)) {
-          setTempBench([...tempBench, id]);
-        }
-      } else if (tempBench.includes(id)) {
-        // Move from bench to starting
-        setTempBench(tempBench.filter(pid => pid !== id));
-        tryAddStarter(player);
-      } else {
-        // Add new player - try starting first, then bench
-        if (!tryAddStarter(player)) {
-          setTempBench([...tempBench, id]);
-        }
-      }
-    };
-
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Side: Pitch Preview */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-            <div>
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Select Formation</label>
-              <select 
-                value={formation}
-                onChange={(e) => { setFormation(e.target.value); setTempStarting([]); setTempBench([]); }}
-                className="w-full py-2.5 px-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700 focus:ring-2 ring-emerald-500/20"
-              >
-                {Object.keys(FORMATIONS).map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
-            </div>
-
-            <div className="relative aspect-[3/4] bg-emerald-600 rounded-[2rem] overflow-hidden border-4 border-white/20 p-6 flex flex-col justify-between">
-              <div className="absolute top-1/2 left-0 right-0 h-px bg-white/20" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-24 border border-white/20 rounded-full" />
-
-              {["Forward", "Midfielder", "Defender", "Goalkeeper"].map(pos => (
-                <div key={pos} className="flex justify-around items-center w-full z-10 min-h-[40px]">
-                  {tempStarting.map(id => rosterPlayers.find(p => p._id === id)).filter(p => p?.position === pos).map(p => (
-                    <div key={p?._id} className="flex flex-col items-center">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full flex items-center justify-center border-2 border-emerald-800 shadow-md">
-                        <span className="text-[10px] font-black text-emerald-900">#{p?.jerseyNumber}</span>
-                      </div>
-                      <span className="text-[8px] font-bold text-white uppercase bg-black/40 px-1.5 rounded mt-1">{p?.name.split(' ').pop()}</span>
-                    </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: 'GK', cur: counts.GK, max: 1 },
-                { label: 'DEF', cur: counts.DEF, max: config.def },
-                { label: 'MID', cur: counts.MID, max: config.mid },
-                { label: 'FWD', cur: counts.FWD, max: config.fwd },
-              ].map(s => (
-                <div key={s.label} className="bg-slate-50 p-2 rounded-xl border border-slate-100 text-center">
-                  <p className="text-[8px] font-black text-slate-400 uppercase">{s.label}</p>
-                  <p className={`text-xs font-black ${s.cur === s.max ? 'text-emerald-600' : 'text-slate-700'}`}>{s.cur}/{s.max}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-2">
-            <button onClick={() => setSelectedMatchForLineup(null)} className="flex-1 py-3 bg-slate-200 hover:bg-slate-300 rounded-2xl font-black text-[10px] uppercase tracking-widest transition">Discard</button>
-            <button 
-              onClick={() => handleSaveLineup(match._id, formation, tempStarting, tempBench)} 
-              className="flex-[2] py-3 bg-[#0a3d0a] text-[#FFD700] rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:brightness-110 transition disabled:opacity-50"
-              disabled={tempStarting.length !== 11}
-            >
-              Confirm Lineup
-            </button>
-          </div>
-        </div>
-
-        {/* Right Side: Selection List Grouped by Position */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-6">
-          <div className="border-b pb-4">
-            <h3 className="font-bebas text-2xl text-slate-800 tracking-wide uppercase">Tactical Selection</h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Fill your {formation} formation by selecting players for each line</p>
-          </div>
-          
-          <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-            {["Goalkeeper", "Defender", "Midfielder", "Forward"].map(pos => (
-              <div key={pos} className="space-y-3">
-                <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em] border-l-2 border-emerald-500 pl-2">{pos}s</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {rosterPlayers.filter(p => p.position === pos).map(p => {
-                    const isStarting = tempStarting.includes(p._id);
-                    const isBench = tempBench.includes(p._id);
-                    return (
-                      <button 
-                        key={p._id} 
-                        onClick={() => togglePlayer(p._id)} 
-                        className={`p-3 rounded-xl border-2 text-left transition flex items-center justify-between gap-3 ${
-                          isStarting ? 'border-emerald-500 bg-emerald-50' : 
-                          isBench ? 'border-amber-400 bg-amber-50' : 
-                          'border-slate-100 bg-slate-50/50 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className="min-w-0">
-                          <p className="text-xs font-black uppercase truncate text-slate-800">{p.name}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase">#{p.jerseyNumber}</p>
-                        </div>
-                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase ${
-                          isStarting ? 'bg-emerald-500 text-white' : 
-                          isBench ? 'bg-amber-400 text-white' : 
-                          'bg-slate-200 text-slate-500'
-                        }`}>
-                          {isStarting ? "XI" : isBench ? "SUB" : "ADD"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
   };
 
   if (loading) {
@@ -513,17 +716,30 @@ export const ClubPortal: React.FC = () => {
         {activeTab === "lineup" && (
           <div className="space-y-6">
             {selectedMatchForLineup ? (
-              <LineupEditor match={selectedMatchForLineup} />
+              <LineupEditor 
+                key={selectedMatchForLineup._id}
+                match={selectedMatchForLineup} 
+                rosterPlayers={rosterPlayers}
+                currentTeamId={currentTeam?.id || ""}
+                onSave={handleSaveLineup}
+                onCancel={() => setSelectedMatchForLineup(null)}
+              />
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {matches.filter(m => (m.homeTeamId === currentTeam?.id || m.awayTeamId === currentTeam?.id) && m.status !== "Completed").map(match => (
                   <div key={match._id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="text-center bg-slate-50 p-2 rounded-xl border">
+                      <div className="text-center bg-slate-50 p-2 rounded-xl border w-24">
                         <p className="text-[10px] font-bold text-slate-400">VS</p>
-                        <p className="text-xs font-black text-slate-700">{match.homeTeamId === currentTeam?.id ? match.awayTeamName : match.homeTeamName}</p>
+                        <p className="text-[10px] font-black text-slate-700 truncate">{match.homeTeamId === currentTeam?.id ? match.awayTeamName : match.homeTeamName}</p>
                       </div>
                       <div>
+                        <button 
+                          onClick={() => setViewingMatch(match)}
+                          className="flex items-center gap-1 text-[10px] font-black text-amber-600 uppercase hover:underline mb-1"
+                        >
+                          <Eye className="h-3 w-3" /> Match Center
+                        </button>
                         <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">{match.stage}</p>
                         <p className="text-xs font-bold text-slate-400">{new Date(match.matchDate).toLocaleDateString()}</p>
                       </div>
@@ -805,6 +1021,14 @@ export const ClubPortal: React.FC = () => {
           currentOfficialCount={totalOfficials}
           onAdd={handleAddOfficial}
           onClose={() => setShowOfficialModal(false)}
+        />
+      )}
+
+      {viewingMatch && (
+        <MatchCenter 
+          match={viewingMatch} 
+          onClose={() => setViewingMatch(null)} 
+          authToken={authToken || ""} 
         />
       )}
 

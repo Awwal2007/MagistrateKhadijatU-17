@@ -3,13 +3,14 @@ import { Link } from "react-router-dom";
 import {
   Shield, Key, AlertCircle, RefreshCw, Trash2, Printer, Search,
   ArrowLeft, LogOut, ChevronRight, Users, UserCheck, Building2,
-  Trophy, TrendingUp, Eye
+  Trophy, TrendingUp, Eye, Zap, Clock
 } from "lucide-react";
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
+import { TournamentHub } from "../components/TournamentHub.js";
 import { TournamentManager } from "../components/TournamentManager.js";
 import { Modal } from "../components/Modal.js";
-import { Team, Player, Official } from "../types.js";
+import { Team, Player, Official, Match } from "../types.js";
 import tournamentLogo from "../assets/logo.jpeg";
 
 interface FullTeamRoster {
@@ -23,6 +24,147 @@ interface FullTeamRoster {
   group?: "A" | "B" | "C" | null;
 }
 
+const FORMATIONS: Record<string, { def: number; mid: number; fwd: number }> = {
+  "4-4-2": { def: 4, mid: 4, fwd: 2 },
+  "4-3-3": { def: 4, mid: 3, fwd: 3 },
+  "3-5-2": { def: 3, mid: 5, fwd: 2 },
+  "3-4-3": { def: 3, mid: 4, fwd: 3 },
+  "5-3-2": { def: 5, mid: 3, fwd: 2 },
+  "4-5-1": { def: 4, mid: 5, fwd: 1 },
+};
+
+const LineupPitchDisplay: React.FC<{
+  lineup: { formation: string; starting11: string[]; bench: string[] };
+  allPlayers: Player[];
+  getPlayerStats: (id: string) => { goals: number; cards: any[] };
+}> = ({ lineup, allPlayers, getPlayerStats }) => {
+  const formation = lineup.formation || "4-4-2";
+  const config = FORMATIONS[formation] || FORMATIONS["4-4-2"];
+
+  const renderRow = (startIndex: number, count: number, label: string) => {
+    const items = [];
+    for (let i = 0; i < count; i++) {
+      const playerId = lineup.starting11[startIndex + i];
+      const p = allPlayers.find(player => player._id === playerId);
+      const stats = playerId ? getPlayerStats(playerId) : { goals: 0, cards: [] };
+
+      items.push(
+        <div key={i} className="flex flex-col items-center gap-1 group">
+          <div className="relative w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 border-white shadow-lg transition-transform group-hover:scale-110 bg-emerald-800">
+            <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+              {p && (p.photoUrl || p.photo) ? (
+                <img src={p.photoUrl || p.photo} alt={p.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-white font-black text-xs sm:text-base">
+                  {p ? `#${p.jerseyNumber}` : "?"}
+                </span>
+              )}
+            </div>
+            <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
+              {stats.goals > 0 && Array(stats.goals).fill(0).map((_, gi) => (
+                <Zap key={gi} className="h-3 w-3 text-[#FFD700] fill-[#FFD700] drop-shadow-md" />
+              ))}
+              {stats.cards.map((c: any, ci: number) => (
+                <div key={ci} className={`w-1.5 h-2 rounded-xs ${c.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} border-[0.5px] border-white/20`} />
+              ))}
+            </div>
+          </div>
+          <span className="bg-black/40 backdrop-blur-md text-white text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter max-w-[70px] truncate text-center">
+            {p ? p.name.split(' ').pop() : label}
+          </span>
+        </div>
+      );
+    }
+    return <div className="flex justify-around items-center w-full z-10 min-h-[60px]">{items}</div>;
+  };
+
+  return (
+    <div className="relative aspect-[3/4] bg-emerald-600 rounded-[2rem] overflow-hidden border-4 border-white/20 p-4 flex flex-col justify-between shadow-xl">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-16 border-2 border-white/30 border-t-0 rounded-b-xl" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-16 border-2 border-white/30 border-b-0 rounded-t-xl" />
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-white/30 -translate-y-1/2" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full" />
+      </div>
+      {renderRow(1 + config.def + config.mid, config.fwd, "FWD")}
+      {renderRow(1 + config.def, config.mid, "MID")}
+      {renderRow(1, config.def, "DEF")}
+      {renderRow(0, 1, "GK")}
+    </div>
+  );
+};
+
+const MatchCenter: React.FC<{
+  match: Match;
+  onClose: () => void;
+  allPlayers: Player[];
+}> = ({ match, onClose, allPlayers }) => {
+  const [activeSide, setActiveSide] = useState<"home" | "away">("home");
+  const lineup = activeSide === "home" ? match.homeLineup : match.awayLineup;
+
+  const getPlayerStats = (playerId: string) => {
+    const playerGoals = match.goals?.filter(g => g.playerId === playerId).length || 0;
+    const playerCards = match.cards?.filter(c => c.playerId === playerId) || [];
+    return { goals: playerGoals, cards: playerCards };
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm no-print">
+      <div className="bg-white rounded-[2.5rem] w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-scale-in">
+        <div className="green-mesh p-8 text-white relative flex items-center justify-between gap-6 border-b-4 border-[#FFD700]">
+          <div className="text-right flex-1">
+            <p className="text-xl font-bebas tracking-wider uppercase">{match.homeTeamName}</p>
+          </div>
+          <div className="bg-[#FFD700] text-[#0a3d0a] px-6 py-2 rounded-2xl font-black text-3xl shadow-lg border-2 border-white/20">
+            {match.homeScore ?? 0} : {match.awayScore ?? 0}
+          </div>
+          <div className="text-left flex-1">
+            <p className="text-xl font-bebas tracking-wider uppercase">{match.awayTeamName}</p>
+          </div>
+          <button onClick={onClose} className="absolute top-4 right-4 text-white/60 hover:text-white"><LogOut className="h-5 w-5 rotate-180" /></button>
+        </div>
+        
+        <div className="flex-1 overflow-y-auto p-6 md:p-10 space-y-10 custom-scrollbar">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Goal Timeline</h3>
+                <div className="space-y-2">
+                  {(match.goals || []).length === 0 && <p className="text-xs text-slate-300 italic">No goals recorded yet</p>}
+                  {match.goals?.map((g, i) => (
+                    <div key={i} className={`flex items-center gap-3 p-2 rounded-xl border ${g.team === 'home' ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'}`}>
+                      <Zap className={`h-3 w-3 ${g.team === 'home' ? 'text-emerald-600' : 'text-blue-600'}`} />
+                      <span className="text-xs font-bold text-slate-700">{g.playerName} <span className="opacity-50">#{g.jerseyNumber}</span></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Tactical Disciplinary</h3>
+                <div className="flex flex-wrap gap-2">
+                  {match.cards?.map((c, i) => (
+                    <div key={i} className={`h-6 w-4 rounded-sm border shadow-sm ${c.type === 'Red' ? 'bg-red-500 border-red-600' : 'bg-yellow-400 border-yellow-500'}`} title={`${c.playerName} (#${c.jerseyNumber})`} />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex bg-slate-100 p-1 rounded-2xl">
+                <button onClick={() => setActiveSide("home")} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeSide === "home" ? 'bg-white shadow-sm text-emerald-700' : 'text-slate-400'}`}>{match.homeTeamName}</button>
+                <button onClick={() => setActiveSide("away")} className={`flex-1 py-2 rounded-xl text-[10px] font-black uppercase transition ${activeSide === "away" ? 'bg-white shadow-sm text-emerald-700' : 'text-slate-400'}`}>{match.awayTeamName}</button>
+              </div>
+              {lineup ? <LineupPitchDisplay lineup={lineup} allPlayers={allPlayers} getPlayerStats={getPlayerStats} /> : (
+                <div className="aspect-[3/4] bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl flex items-center justify-center text-slate-400 text-[10px] font-black uppercase">No Lineup Provided</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const AdminPage: React.FC = () => {
   const { authToken, isAdmin, loginAdmin, logout } = useRegistration();
 
@@ -34,10 +176,12 @@ export const AdminPage: React.FC = () => {
   // Admin Dashboard State
   const [fullTeamsList, setFullTeamsList] = useState<FullTeamRoster[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<FullTeamRoster | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [viewingMatch, setViewingMatch] = useState<Match | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [loadingRecords, setLoadingRecords] = useState(false);
   const [errorOnRecords, setErrorOnRecords] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"players" | "officials" | "tournament">("players");
+  const [activeTab, setActiveTab] = useState<"players" | "officials" | "tournament" | "overview" | "fixtures">("overview");
   const [deletingPlayerId, setDeletingPlayerId] = useState<string | null>(null);
   const [deletingOfficialId, setDeletingOfficialId] = useState<string | null>(null);
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
@@ -55,6 +199,9 @@ export const AdminPage: React.FC = () => {
   useEffect(() => {
     if (isAdmin && authToken) {
       loadAdminRecords();
+      loadMatches();
+      const interval = setInterval(loadMatches, 20000);
+      return () => clearInterval(interval);
     }
   }, [isAdmin, authToken]);
 
@@ -69,13 +216,11 @@ export const AdminPage: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: passwordInput })
       });
-
+      const data = await response.json();
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.message || "Invalid administrative entry code key.");
       }
 
-      const data = await response.json();
       loginAdmin(data.token);
       setPasswordInput("");
     } catch (err: any) {
@@ -101,14 +246,28 @@ export const AdminPage: React.FC = () => {
       setSelectedTeam(prev => {
         if (prev) {
           const fresh = teams.find((t: any) => t.id === prev.id);
-          return fresh || (teams.length > 0 ? teams[0] : null);
+          return fresh || null;
         }
-        return teams.length > 0 ? teams[0] : null;
+        return null;
       });
     } catch (err: any) {
       setErrorOnRecords(err.message || "Failure synchronizing ledger rosters.");
     } finally {
       setLoadingRecords(false);
+    }
+  };
+
+  const loadMatches = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMatches(data.matches || []);
+      }
+    } catch (err) {
+      console.error("Match load error:", err);
     }
   };
 
@@ -384,6 +543,27 @@ export const AdminPage: React.FC = () => {
               <p className="text-[10px] text-gray-400">{fullTeamsList.length} club profiles indexed</p>
             </div>
 
+            {/* TOURNAMENT HUB ACCESS */}
+            <button
+              onClick={() => { setSelectedTeam(null); setActiveTab("overview"); }}
+              className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                !selectedTeam
+                  ? 'bg-emerald-700 border-emerald-800 text-[#FFD700] shadow-md'
+                  : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div className={`p-2 rounded-xl ${!selectedTeam ? 'bg-white/10' : 'bg-emerald-50'}`}>
+                  <Trophy className={`h-4 w-4 ${!selectedTeam ? 'text-[#FFD700]' : 'text-emerald-700'}`} />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-black block uppercase tracking-wider">Tournament Hub</span>
+                  <span className={`text-[8px] font-bold block uppercase tracking-widest ${!selectedTeam ? 'text-[#FFD700]/70' : 'text-slate-400'}`}>Stats & Standings</span>
+                </div>
+              </div>
+              <ChevronRight className={`h-4 w-4 ${!selectedTeam ? 'text-[#FFD700]' : 'text-slate-300'}`} />
+            </button>
+
             {/* SEARCH */}
             <div className="relative">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
@@ -454,12 +634,61 @@ export const AdminPage: React.FC = () => {
           <div className="lg:col-span-3 space-y-5">
 
             {!selectedTeam ? (
-              <div className="bg-white rounded-3xl p-16 text-center border border-slate-200/60 shadow-xs">
-                <div className="text-6xl mb-4">📋</div>
-                <h4 className="font-bebas text-2xl text-slate-500 tracking-wider uppercase">Select a Club</h4>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto mt-2 leading-relaxed">
-                  Choose a football club from the sidebar to view their roster, manage cards, and print credentials.
-                </p>
+              <div className="space-y-6">
+                <div className="flex gap-2 no-print overflow-x-auto pb-1 scrollbar-thin">
+                  {[
+                    { id: "overview", label: "Standings & Stats" },
+                    { id: "fixtures", label: "Match Fixtures" },
+                    { id: "tournament", label: "Tournament Manager" },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
+                        (activeTab === tab.id || (tab.id === "overview" && activeTab === "players"))
+                          ? 'bg-[#0a3d0a] text-[#FFD700] shadow-md'
+                          : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {activeTab === "overview" && (
+                  <div className="space-y-4">
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Live & Recent Results</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {matches.slice(0, 4).map(match => (
+                        <div key={match._id} className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-emerald-50 p-2 rounded-xl text-emerald-700">
+                              {match.status === "Live" ? <Clock className="h-4 w-4 animate-pulse" /> : <Trophy className="h-4 w-4" />}
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black uppercase text-slate-800">{match.homeTeamName} {match.homeScore}-{match.awayScore} {match.awayTeamName}</p>
+                              <p className="text-[8px] font-bold text-slate-400 uppercase">{match.stage} • {match.status}</p>
+                            </div>
+                          </div>
+                          <button onClick={() => setViewingMatch(match)} className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition">
+                            <Eye className="h-3.5 w-3.5 text-slate-600" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(activeTab === "overview" || activeTab === "players") && <TournamentHub authToken={authToken || ""} activeTab="tournament" />}
+                {activeTab === "fixtures" && <TournamentHub authToken={authToken || ""} activeTab="fixtures" />}
+                {activeTab === "tournament" && (
+                  <TournamentManager 
+                    teams={fullTeamsList} 
+                    authToken={authToken || ""} 
+                    onRefreshTeams={loadAdminRecords}
+                    onViewMatch={(m) => setViewingMatch(m)}
+                  />
+                )}
               </div>
             ) : (
               <>
@@ -674,6 +903,14 @@ export const AdminPage: React.FC = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {viewingMatch && (
+        <MatchCenter 
+          match={viewingMatch} 
+          onClose={() => setViewingMatch(null)} 
+          allPlayers={fullTeamsList.flatMap(t => t.players)} 
+        />
       )}
 
       <Modal

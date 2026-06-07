@@ -3,7 +3,7 @@ import { Match, Team, Player } from "../types.js";
 import {
   Trophy, Calendar, Plus, Trash2, Shield, CalendarDays,
   RefreshCw, CheckCircle, Clock, ChevronDown, Swords, Star,
-  AlertCircle, Layers, Zap
+  AlertCircle, Layers, Zap, Eye
 } from "lucide-react";
 import { LiveScoringBoard } from "./LiveScoringBoard.js";
 import { Modal } from "./Modal.js";
@@ -18,6 +18,7 @@ interface TournamentManagerProps {
   teams: FullTeamRoster[];
   authToken: string;
   onRefreshTeams: () => void;
+  onViewMatch?: (match: Match) => void;
 }
 
 const STAGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
@@ -33,7 +34,7 @@ const GROUP_COLORS: Record<string, { bg: string; text: string; ring: string; dot
   C: { bg: "bg-purple-100",  text: "text-purple-800",  ring: "ring-purple-400",  dot: "bg-purple-500",  cardBg: "bg-purple-50",   cardBorder: "border-purple-300",  headerBorder: "border-purple-200"  },
 };
 
-export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, authToken, onRefreshTeams }) => {
+export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, authToken, onRefreshTeams, onViewMatch }) => {
   const [matches, setMatches]       = useState<Match[]>([]);
   const [loading, setLoading]       = useState(false);
   const [syncing, setSyncing]       = useState(false);
@@ -114,7 +115,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
         handleSelectLiveMatch(match);
       }
     }
-  }, [matches.length === 0]); // Run once when matches first load
+  }, [matches, selectedLiveMatchId]);
 
   const loadMatches = async () => {
     setLoading(true);
@@ -514,6 +515,13 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
 
                           {/* Right: actions */}
                           <div className="flex items-center gap-2 self-end sm:self-center">
+                            <button
+                              onClick={() => onViewMatch?.(match)}
+                              title="View Tactical Pitch"
+                              className="p-2 rounded-xl border transition text-xs font-bold text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
                             <button
                               onClick={() => handleSelectLiveMatch(match)}
                               title="Start Live Scoring"
