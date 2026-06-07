@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Match, Player } from "../types.js";
+import { Modal } from "./Modal.js"
 import {
-  Play, Square, Trash2, Plus, RefreshCw, TrendingUp, Zap, Trophy, Clock, AlertTriangle
+  Play, Square, Trash2, Plus, RefreshCw, TrendingUp, Zap, Trophy, Clock, AlertTriangle, Pause
 } from "lucide-react";
 
 interface LiveScoringBoardProps {
@@ -43,6 +44,8 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
   onMatchUpdated
 }) => {
   const [isLive, setIsLive] = useState(match.status === "Live");
+  const [matchTime, setMatchTime] = useState(0); // Time in seconds
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [homeSelectedPlayer, setHomeSelectedPlayer] = useState("");
   const [awaySelectedPlayer, setAwaySelectedPlayer] = useState("");
   const [homeSelectedCardPlayer, setHomeSelectedCardPlayer] = useState("");
@@ -51,6 +54,15 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
   const [awayCardType, setAwayCardType] = useState<"Yellow" | "Red">("Yellow");
   const [recordingGoal, setRecordingGoal] = useState<"home" | "away" | null>(null);
   const [recordingCard, setRecordingCard] = useState<"home" | "away" | null>(null);
+  // Modal state
+  const [modalConfig, setModalConfig] = useState<{
+      isOpen: boolean;
+      title: string;
+      message: string;
+      type: "info" | "success" | "warning" | "error" | "confirm";
+      onConfirm?: () => void;
+      isDangerous?: boolean;
+    }>({ isOpen: false, title: "", message: "", type: "info" });
   const [goals, setGoals] = useState<Goal[]>(match.goals || []);
   const [cards, setCards] = useState<Card[]>(match.cards || []);
   const [homeGoalScorers, setHomeGoalScorers] = useState<GoalScorer[]>([]);
@@ -59,12 +71,38 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isLive && isTimerRunning) {
+      interval = setInterval(() => {
+        setMatchTime((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isLive, isTimerRunning]);
+
+  useEffect(() => {
     calculateGoalScorers();
   }, [goals]); // Remove dependencies that cause unnecessary recalculations
 
   useEffect(() => {
     setGoals(match.goals || []);
     setCards(match.cards || []);
+    setIsLive(match.status === "Live");
+
+    // Calculate current time if match is live
+    if (match.status === "Live") {
+      if (match.timerLastStarted) {
+        const start = new Date(match.timerLastStarted).getTime();
+        const elapsed = Math.floor((new Date().getTime() - start) / 1000);
+        setMatchTime((match.timerAccumulatedTime || 0) + elapsed);
+        if (!isTimerRunning) setIsTimerRunning(true);
+      } else {
+        setMatchTime(match.timerAccumulatedTime || 0);
+        if (isTimerRunning) setIsTimerRunning(false);
+      }
+    }
   }, [match]);
 
   const calculateGoalScorers = () => {
@@ -110,47 +148,58 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
       }
       const data = await res.json();
       setIsLive(true);
+      setMatchTime(0);
+      setIsTimerRunning(true);
       setGoals([]);
       setCards([]);
       onMatchUpdated(data.match);
     } catch (err: any) {
       console.error("Start live error:", err);
       setError(err.message);
-      alert(err.message);
+      setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEndLive = async () => {
-    if (!window.confirm("End the match? This cannot be undone.")) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/end-live`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to end match");
+  const handleEndLive = () => {
+    setModalConfig({
+      isOpen: true,
+      title: "End Match",
+      message: "Are you sure you want to end the match? This will finalize the scores and cannot be undone.",
+      type: "confirm",
+      isDangerous: true,
+      onConfirm: async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/end-live`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.message || "Failed to end match");
+          }
+          const data = await res.json();
+          setIsLive(false);
+          setIsTimerRunning(false);
+          onMatchUpdated(data.match);
+        } catch (err: any) {
+          console.error("End live error:", err);
+          setError(err.message);
+          setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
+        } finally {
+          setLoading(false);
+        }
       }
-      const data = await res.json();
-      setIsLive(false);
-      onMatchUpdated(data.match);
-    } catch (err: any) {
-      console.error("End live error:", err);
-      setError(err.message);
-      alert(err.message);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleRecordGoal = async (team: "home" | "away") => {
     const selectedPlayerId = team === "home" ? homeSelectedPlayer : awaySelectedPlayer;
     if (!selectedPlayerId) {
-      alert("Please select a player");
+      setModalConfig({ isOpen: true, title: "Selection Required", message: "Please select a player to record a goal.", type: "warning" });
       return;
     }
 
@@ -159,7 +208,7 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
       : awayTeamPlayers.find(p => p._id === selectedPlayerId);
 
     if (!player) {
-      alert("Player not found");
+      setModalConfig({ isOpen: true, title: "Error", message: "Selected player could not be found in the roster.", type: "error" });
       return;
     }
 
@@ -178,7 +227,9 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
           playerName: player.name,
           jerseyNumber: player.jerseyNumber,
           team,
-          timestamp: new Date().toISOString() // Add timestamp client-side
+          timestamp: new Date().toISOString(),
+          timerLastStarted: isTimerRunning ? new Date().toISOString() : null,
+          timerAccumulatedTime: matchTime
         })
       });
       
@@ -206,42 +257,47 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
     } catch (err: any) {
       console.error("Record goal error:", err);
       setError(err.message);
-      alert(err.message);
+      setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
     } finally {
       setRecordingGoal(null);
     }
   };
 
-  const handleRemoveGoal = async (index: number) => {
-    if (!window.confirm("Remove this goal?")) return;
-    setError(null);
-    
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/goal/${index}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to remove goal");
+  const handleRemoveGoal = (index: number) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Remove Goal",
+      message: "Are you sure you want to remove this goal? The score will be adjusted accordingly.",
+      type: "confirm",
+      isDangerous: true,
+      onConfirm: async () => {
+        setError(null);
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/goal/${index}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          if (!res.ok) {
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.message || "Failed to remove goal");
+          }
+          const data = await res.json();
+          setGoals(data.match.goals || []);
+          onMatchUpdated(data.match);
+        } catch (err: any) {
+          console.error("Remove goal error:", err);
+          setError(err.message);
+          setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
+        }
       }
-      
-      const data = await res.json();
-      setGoals(data.match.goals || []);
-      onMatchUpdated(data.match);
-    } catch (err: any) {
-      console.error("Remove goal error:", err);
-      setError(err.message);
-      alert(err.message);
-    }
+    });
   };
 
   const handleRecordCard = async (team: "home" | "away") => {
     const selectedPlayerId = team === "home" ? homeSelectedCardPlayer : awaySelectedCardPlayer;
     const cardType = team === "home" ? homeCardType : awayCardType;
     if (!selectedPlayerId) {
-      alert("Please select a player");
+      setModalConfig({ isOpen: true, title: "Selection Required", message: "Please select a player to record a card.", type: "warning" });
       return;
     }
 
@@ -250,7 +306,7 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
       : awayTeamPlayers.find(p => p._id === selectedPlayerId);
 
     if (!player) {
-      alert("Player not found");
+      setModalConfig({ isOpen: true, title: "Error", message: "Selected player could not be found in the roster.", type: "error" });
       return;
     }
 
@@ -270,7 +326,9 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
           jerseyNumber: player.jerseyNumber,
           team,
           type: cardType,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          timerLastStarted: isTimerRunning ? new Date().toISOString() : null,
+          timerAccumulatedTime: matchTime
         })
       });
       
@@ -312,6 +370,45 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
       setError(err.message);
       alert(err.message);
     }
+  };
+
+  const handleToggleTimer = async () => {
+    const newIsRunning = !isTimerRunning;
+    const lastStarted = newIsRunning ? new Date().toISOString() : null;
+    const accumulated = matchTime;
+
+    setIsTimerRunning(newIsRunning);
+    await syncTimerToServer(lastStarted, accumulated);
+  };
+
+  const handleSetSecondHalf = async () => {
+    const accumulated = 45 * 60;
+    const lastStarted = new Date().toISOString();
+    setMatchTime(accumulated);
+    setIsTimerRunning(true);
+    await syncTimerToServer(lastStarted, accumulated);
+  };
+
+  const syncTimerToServer = async (lastStarted: string | null, accumulated: number) => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/sync-timer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ timerLastStarted: lastStarted, timerAccumulatedTime: accumulated })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onMatchUpdated(data.match);
+      }
+    } catch (err) {
+      console.error("Timer sync error:", err);
+    }
+  };
+
+  const formatDisplayTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   const homeScore = goals.filter(g => g.team === "home").length;
@@ -388,7 +485,38 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
             <div className="text-6xl font-black text-emerald-600">{homeScore}</div>
           </div>
 
-          <div className="text-4xl font-black text-slate-200 px-4 self-center select-none">VS</div>
+          <div className="flex flex-col items-center justify-center px-4 min-w-[120px]">
+            {isLive ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="text-3xl font-mono font-black text-slate-700 bg-slate-50 px-4 py-2 rounded-2xl border-2 border-slate-100 shadow-inner select-none">
+                  {formatDisplayTime(matchTime)}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleToggleTimer}
+                    className={`p-2 rounded-xl transition shadow-sm border ${
+                      isTimerRunning 
+                        ? "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100" 
+                        : "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100"
+                    }`}
+                    title={isTimerRunning ? "Pause Timer" : "Resume Timer"}
+                  >
+                    {isTimerRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={handleSetSecondHalf}
+                    className="p-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl hover:bg-blue-100 transition shadow-sm flex items-center gap-1"
+                    title="Start 2nd Half (45:00)"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    <span className="text-[10px] font-bold">2H</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-4xl font-black text-slate-200 select-none uppercase tracking-widest">VS</div>
+            )}
+          </div>
 
           <div className="text-center flex flex-col items-center gap-2 flex-1 min-w-0">
             <img 
@@ -707,6 +835,16 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
           </p>
         </div>
       )}
+
+      <Modal
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={modalConfig.onConfirm}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        isDangerous={modalConfig.isDangerous}
+      />
     </div>
   );
 };

@@ -32,6 +32,12 @@ export interface RegistrationState {
   officials: Omit<Official, "_id" | "teamId">[];
 }
 
+export interface Lineup {
+  formation: string;
+  starting11: string[]; // array of playerIds
+  bench: string[];      // array of playerIds
+}
+
 export interface Match {
   _id: string;
   homeTeamId: string;
@@ -45,6 +51,8 @@ export interface Match {
   status: "Scheduled" | "Live" | "Completed";
   stage: "Group Stage" | "Quarter Final" | "Semi Final" | "Final";
   round?: string;
+  homeLineup?: Lineup;
+  awayLineup?: Lineup;
   group: "A" | "B" | "C" | null;
   matchDate: string;
   goals?: Array<{
@@ -62,6 +70,8 @@ export interface Match {
     type: "Yellow" | "Red";
     timestamp: string;
   }>;
+  timerLastStarted?: string | null;
+  timerAccumulatedTime?: number;
 }
 
 export interface GroupStanding {

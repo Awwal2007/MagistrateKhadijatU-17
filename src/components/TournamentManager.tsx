@@ -6,6 +6,7 @@ import {
   AlertCircle, Layers, Zap
 } from "lucide-react";
 import { LiveScoringBoard } from "./LiveScoringBoard.js";
+import { Modal } from "./Modal.js";
 
 interface FullTeamRoster extends Team {
   group?: "A" | "B" | "C" | null;
@@ -37,12 +38,29 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   const [loading, setLoading]       = useState(false);
   const [syncing, setSyncing]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<"groups" | "schedule" | "matches" | "standings" | "live-scoring">("matches");
+  const [activeSection, setActiveSection] = useState<"groups" | "schedule" | "matches" | "standings" | "live-scoring">(
+    (localStorage.getItem("tm_active_section") as any) || "matches"
+  );
+
+  const [selectedLiveMatchId, setSelectedLiveMatchId] = useState<string | null>(
+    localStorage.getItem("tm_selected_match_id")
+  );
 
   // Live Scoring State
   const [selectedLiveMatch, setSelectedLiveMatch] = useState<Match | null>(null);
   const [homeTeamPlayers, setHomeTeamPlayers] = useState<Player[]>([]);
   const [awayTeamPlayers, setAwayTeamPlayers] = useState<Player[]>([]);
+  const [now, setNow] = useState(Date.now());
+
+  // Modal state
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "success" | "warning" | "error" | "confirm";
+    onConfirm?: () => void;
+    isDangerous?: boolean;
+  }>({ isOpen: false, title: "", message: "", type: "info" });
 
   // Score editing local state: matchId -> { home, away }
   const [scoreEdits, setScoreEdits] = useState<Record<string, { home: string; away: string }>>({});
@@ -59,6 +77,44 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   const [creating, setCreating]          = useState(false);
 
   useEffect(() => { loadMatches(); }, [authToken]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getLiveTime = (m: Match) => {
+    const accumulated = m.timerAccumulatedTime || 0;
+    const lastStartedTime = m.timerLastStarted ? new Date(m.timerLastStarted).getTime() : 0;
+    const diff = (m.status === "Live" && lastStartedTime > 0) ? Math.floor((now - lastStartedTime) / 1000) : 0;
+    const totalSecs = Math.max(0, accumulated + diff);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // Persistence effects
+  useEffect(() => {
+    localStorage.setItem("tm_active_section", activeSection);
+  }, [activeSection]);
+
+  useEffect(() => {
+    if (selectedLiveMatchId) {
+      localStorage.setItem("tm_selected_match_id", selectedLiveMatchId);
+    } else {
+      localStorage.removeItem("tm_selected_match_id");
+    }
+  }, [selectedLiveMatchId]);
+
+  // Restore selected match object once matches are loaded
+  useEffect(() => {
+    if (selectedLiveMatchId && matches.length > 0) {
+      const match = matches.find(m => m._id === selectedLiveMatchId);
+      if (match) {
+        handleSelectLiveMatch(match);
+      }
+    }
+  }, [matches.length === 0]); // Run once when matches first load
 
   const loadMatches = async () => {
     setLoading(true);
@@ -81,7 +137,11 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   const formatMatchDateTime = (dateString: string) => {
     const date = new Date(dateString);
     return {
-      date: date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+      date: date.toLocaleDateString('en-US', { 
+        weekday: 'short', 
+        month: 'short', 
+        day: 'numeric' 
+      }),
       time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
     };
   };
@@ -100,15 +160,21 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
         setSyncing(false);
       }, 500);
     } catch (err: any) {
-      alert(err.message);
+      setModalConfig({ isOpen: true, title: "Sync Error", message: err.message, type: "error" });
       setSyncing(false);
     }
   };
 
   const handleCreateMatch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMatchHome === newMatchAway) { alert("Home and away teams cannot be the same."); return; }
-    if (!newMatchDate) { alert("Match date is required."); return; }
+    if (newMatchHome === newMatchAway) { 
+      setModalConfig({ isOpen: true, title: "Validation Error", message: "Home and away teams cannot be the same.", type: "warning" });
+      return; 
+    }
+    if (!newMatchDate) { 
+      setModalConfig({ isOpen: true, title: "Validation Error", message: "Match date is required.", type: "warning" });
+      return; 
+    }
     setCreating(true);
     try {
       const matchDate = newMatchTime ? `${newMatchDate}T${newMatchTime}` : newMatchDate;
@@ -127,7 +193,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
       setActiveSection("matches");
       loadMatches();
     } catch (err: any) {
-      alert(err.message);
+      setModalConfig({ isOpen: true, title: "Schedule Error", message: err.message, type: "error" });
     } finally {
       setCreating(false);
     }
@@ -150,7 +216,8 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
       setScoreEdits(prev => { const n = { ...prev }; delete n[match._id]; return n; });
       loadMatches();
     } catch (err: any) {
-      alert(err.message);
+      setModalConfig({ isOpen: true, title: "Update Error", message: err.message, type: "error" });
+      if (match._id === selectedLiveMatchId) setSelectedLiveMatchId(null);
     } finally {
       setSavingScore(null);
     }
@@ -167,22 +234,31 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
       if (!res.ok) throw new Error("Failed to update status");
       loadMatches();
     } catch (err: any) {
-      alert(err.message);
+      setModalConfig({ isOpen: true, title: "Status Error", message: err.message, type: "error" });
     }
   };
 
-  const handleDeleteMatch = async (matchId: string) => {
-    if (!window.confirm("Delete this match permanently?")) return;
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${matchId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-      if (!res.ok) throw new Error("Failed to delete match");
-      loadMatches();
-    } catch (err: any) {
-      alert(err.message);
-    }
+  const handleDeleteMatch = (matchId: string) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Delete Match",
+      message: "Delete this match permanently?",
+      type: "confirm",
+      isDangerous: true,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${matchId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          if (!res.ok) throw new Error("Failed to delete match");
+          loadMatches();
+          if (matchId === selectedLiveMatchId) setSelectedLiveMatchId(null);
+        } catch (err: any) {
+          setModalConfig({ isOpen: true, title: "Delete Error", message: err.message, type: "error" });
+        }
+      }
+    });
   };
 
   const loadPlayersForMatch = (match: Match) => {
@@ -198,6 +274,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   };
 
   const handleSelectLiveMatch = (match: Match) => {
+    setSelectedLiveMatchId(match._id);
     setSelectedLiveMatch(match);
     loadPlayersForMatch(match);
     setActiveSection("live-scoring");

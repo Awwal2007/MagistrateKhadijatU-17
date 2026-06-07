@@ -1,6 +1,56 @@
-import React, { useState, useEffect } from "react";
-import { Match, GroupStanding } from "../types.js";
-import { Trophy, Calendar, MapPin, Clock, Layers } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Match, GroupStanding, Player } from "../types.js";
+import { Modal } from "./Modal.js";
+import { Trophy, Calendar, MapPin, Clock, Layers, Users, ShieldAlert, Zap, AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
+
+const TacticalPitch: React.FC<{ 
+  teamName: string; 
+  starters: string[]; 
+  allPlayers: Player[]; 
+  theme: 'emerald' | 'blue';
+  getPlayerStats: (id: string) => { goals: number, cards: any[] };
+}> = ({ starters, allPlayers, theme, getPlayerStats }) => {
+  const positions = ["Forward", "Midfielder", "Defender", "Goalkeeper"] as const;
+  
+  return (
+    <div className="relative aspect-[3/4] w-full bg-emerald-600 rounded-3xl overflow-hidden border-4 border-white/20 shadow-2xl flex flex-col justify-between p-4 sm:p-8">
+      {/* Pitch Markings */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-16 border-2 border-white/30 border-t-0 rounded-b-xl" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-16 border-2 border-white/30 border-b-0 rounded-t-xl" />
+        <div className="absolute top-1/2 left-0 right-0 h-px bg-white/30 -translate-y-1/2" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full" />
+      </div>
+
+      {positions.map((pos) => {
+        const playersInPos = starters.map(id => allPlayers.find(p => p._id === id)).filter(p => p?.position === pos);
+        return (
+          <div key={pos} className="flex justify-around items-center w-full z-10">
+            {playersInPos.map((p) => {
+              if (!p) return null;
+              const stats = getPlayerStats(p._id);
+              return (
+                <div key={p._id} className="flex flex-col items-center gap-1 group">
+                  <div className={`relative w-10 h-10 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border-2 border-white shadow-lg transition-transform group-hover:scale-110 ${theme === 'emerald' ? 'bg-emerald-800' : 'bg-blue-800'}`}>
+                    <span className="text-white font-black text-xs sm:text-base">#{p.jerseyNumber}</span>
+                    {/* Mini Stats Overlays */}
+                    <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
+                      {stats.goals > 0 && <Zap className="h-3 w-3 text-[#FFD700] fill-[#FFD700] drop-shadow-md" />}
+                      {stats.cards.map((c, i) => <div key={i} className={`w-1.5 h-2 rounded-xs ${c.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'}`} />)}
+                    </div>
+                  </div>
+                  <span className="bg-black/40 backdrop-blur-md text-white text-[8px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-tighter max-w-[70px] truncate text-center">
+                    {p.name.split(' ').pop()}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 interface TournamentHubProps {
   authToken: string;
@@ -11,18 +61,86 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   const [standings, setStandings] = useState<{ A: GroupStanding[]; B: GroupStanding[]; C: GroupStanding[] }>({ A: [], B: [], C: [] });
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
+  const [now, setNow] = useState(Date.now());
+
+  // Match Detail Modal State
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
+  const [rosters, setRosters] = useState<{ home: Player[], away: Player[] }>({ home: [], away: [] });
+  const [loadingRosters, setLoadingRosters] = useState(false);
+  const [stats, setStats] = useState<{
+    topScorers: Array<{ name: string, team: string, teamLogo: string, goals: number }>,
+    disciplinary: Array<{
+      playerName: string,
+      teamName: string,
+      teamLogo: string,
+      type: "Yellow" | "Red",
+      date: string,
+      matchMissed?: string
+    }>
+  }>({ topScorers: [], disciplinary: [] });
 
   useEffect(() => {
     loadData();
+    // Periodically sync match data for real-time score updates
+    const interval = setInterval(loadData, 20000); 
+    return () => clearInterval(interval);
   }, [authToken]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleMatchClick = async (match: Match) => {
+    setSelectedMatch(match);
+    setLoadingRosters(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches/${match._id}/rosters`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRosters({ home: data.homePlayers, away: data.awayPlayers });
+      }
+    } catch (err) {
+      console.error("Error loading rosters:", err);
+    } finally {
+      setLoadingRosters(false);
+    }
+  };
+
+  const getPlayerName = (playerId: string, team: 'home' | 'away') => {
+    const player = rosters[team].find(p => p._id === playerId);
+    return player ? `${player.name} (#${player.jerseyNumber})` : "Unknown Player";
+  };
+
+  const getPlayerStats = (playerId: string) => {
+    if (!selectedMatch) return { goals: 0, cards: [] };
+    const playerGoals = selectedMatch.goals?.filter(g => g.playerId === playerId).length || 0;
+    const playerCards = selectedMatch.cards?.filter(c => c.playerId === playerId) || [];
+    return { goals: playerGoals, cards: playerCards };
+  };
+
+  const formatEventTime = (timestamp: string) => {
+    try {
+      return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (e) { return ""; }
+  };
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [standingsRes, matchesRes] = await Promise.all([
+      const [standingsRes, matchesRes, statsRes] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_URL || ""}/api/standings`, { headers: { Authorization: `Bearer ${authToken}` } }),
-        fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches`, { headers: { Authorization: `Bearer ${authToken}` } })
+        fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches`, { headers: { Authorization: `Bearer ${authToken}` } }),
+        fetch(`${import.meta.env.VITE_API_URL || ""}/api/stats`, { headers: { Authorization: `Bearer ${authToken}` } })
       ]);
+
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        setStats(statsData);
+      }
 
       if (standingsRes.ok) {
         const sData = await standingsRes.json();
@@ -71,6 +189,179 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     const roundOrder = Array.from(new Set(sorted.map(m => m.round || "Match Fixtures")));
     return { grouped, roundOrder };
   };
+
+  const getLiveTime = (m: Match) => {
+    const accumulated = m.timerAccumulatedTime || 0;
+    const lastStartedTime = m.timerLastStarted ? new Date(m.timerLastStarted).getTime() : 0;
+    const diff = (m.status === "Live" && lastStartedTime > 0) ? Math.floor((now - lastStartedTime) / 1000) : 0;
+    const totalSecs = Math.max(0, accumulated + diff);
+    const mins = Math.floor(totalSecs / 60);
+    const secs = totalSecs % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  // PROFESSIONAL MATCH CENTER VIEW
+  if (selectedMatch) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        {/* Back Navigation */}
+        <button 
+          onClick={() => setSelectedMatch(null)}
+          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#0a3d0a] transition-colors uppercase tracking-widest bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Tournament
+        </button>
+
+        {/* Match Center Header */}
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
+          <div className="green-mesh p-8 sm:p-12 text-white relative">
+            <div className="relative z-10 flex flex-col items-center gap-8">
+              <div className="flex items-center justify-between w-full max-w-4xl gap-4 sm:gap-12">
+                <div className="flex-1 flex flex-col items-center text-center gap-4">
+                  <img 
+                    src={selectedMatch.homeTeamLogo} 
+                    className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-[#FFD700] bg-white object-cover shadow-xl" 
+                    alt="home"
+                  />
+                  <h2 className="font-bebas text-2xl sm:text-4xl tracking-wide uppercase">{selectedMatch.homeTeamName}</h2>
+                </div>
+                
+                <div className="flex flex-col items-center gap-4">
+                  <div className="text-5xl sm:text-8xl font-black flex gap-4 drop-shadow-lg">
+                    <span>{selectedMatch.homeScore ?? 0}</span>
+                    <span className="text-[#FFD700] animate-pulse">:</span>
+                    <span>{selectedMatch.awayScore ?? 0}</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] bg-[#FFD700] text-[#0a3d0a] px-4 py-1.5 rounded-full shadow-sm">
+                      {selectedMatch.status === "Live" ? `LIVE • ${getLiveTime(selectedMatch)}` : selectedMatch.status}
+                    </span>
+                    <span className="text-[10px] font-bold text-white/60 uppercase tracking-widest">{selectedMatch.stage}</span>
+                  </div>
+                </div>
+
+                <div className="flex-1 flex flex-col items-center text-center gap-4">
+                  <img 
+                    src={selectedMatch.awayTeamLogo} 
+                    className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-[#FFD700] bg-white object-cover shadow-xl" 
+                    alt="away"
+                  />
+                  <h2 className="font-bebas text-2xl sm:text-4xl tracking-wide uppercase">{selectedMatch.awayTeamName}</h2>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Match Content */}
+          <div className="p-6 sm:p-12 space-y-16">
+            {loadingRosters ? (
+              <div className="py-20 text-center flex flex-col items-center gap-3">
+                <RefreshCw className="h-8 w-8 text-[#0a3d0a] animate-spin" />
+                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Retrieving Official Match Records...</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                
+                {/* Left Column: Timeline & Stats */}
+                <div className="lg:col-span-4 space-y-12">
+                  {(selectedMatch.goals?.length || 0) + (selectedMatch.cards?.length || 0) > 0 ? (
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-2 border-b border-slate-100 pb-4">
+                        <Clock className="h-5 w-5 text-[#0a3d0a]" />
+                        <h3 className="font-bebas text-2xl text-slate-800 tracking-wide uppercase">Events Timeline</h3>
+                      </div>
+                      <div className="relative space-y-6 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-px before:bg-slate-100">
+                        {[...(selectedMatch.goals || []), ...(selectedMatch.cards || [])]
+                          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                          .map((event, idx) => {
+                            const isGoal = 'team' in event && !('type' in event);
+                            return (
+                              <div key={idx} className="flex items-start gap-4 relative z-10">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm ${isGoal ? 'bg-emerald-500 text-white' : (event as any).type === 'Red' ? 'bg-red-500 text-white' : 'bg-yellow-400 text-white'}`}>
+                                  {isGoal ? <Zap className="h-4 w-4 fill-current" /> : <AlertTriangle className="h-4 w-4 fill-current" />}
+                                </div>
+                                <div className="pt-1">
+                                  <p className="text-[10px] font-black text-slate-400 uppercase">{formatEventTime(event.timestamp)}</p>
+                                  <p className="text-sm font-bold text-slate-800">{event.playerName}</p>
+                                  <p className="text-[10px] font-bold text-[#0a3d0a] uppercase tracking-widest">{event.team === 'home' ? selectedMatch.homeTeamName : selectedMatch.awayTeamName}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-50 rounded-3xl p-8 text-center border border-slate-100">
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No major match events recorded</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column: Lineups */}
+                <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-12">
+                   {/* Home Lineup */}
+                   <div className="space-y-6">
+                    <div className="flex items-center gap-3 bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
+                      <img src={selectedMatch.homeTeamLogo} className="w-10 h-10 rounded-full bg-white object-cover border border-emerald-200" />
+                      <h3 className="font-bebas text-2xl text-emerald-900 tracking-wide uppercase">{selectedMatch.homeTeamName} XI</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {selectedMatch.homeLineup?.starting11.length ? (
+                        selectedMatch.homeLineup.starting11.map(id => {
+                          const stats = getPlayerStats(id);
+                          return (
+                            <div key={id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-emerald-200 transition-all shadow-sm group">
+                              <span className="text-xs font-black text-slate-700 uppercase">{getPlayerName(id, 'home')}</span>
+                              <div className="flex items-center gap-1.5">
+                                {stats.goals > 0 && Array(stats.goals).fill(0).map((_, i) => (
+                                  <Zap key={i} className="h-3 w-3 text-emerald-500 fill-emerald-500" />
+                                ))}
+                                {stats.cards.map((c, i) => (
+                                  <div key={i} className={`w-2 h-3 rounded-xs ${c.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} shadow-xs`} />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : <p className="text-xs text-slate-400 italic bg-slate-50 p-4 rounded-xl">Squad list pending submission...</p>}
+                    </div>
+                  </div>
+
+                  {/* Away Lineup */}
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-3 bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                      <img src={selectedMatch.awayTeamLogo} className="w-10 h-10 rounded-full bg-white object-cover border border-blue-200" />
+                      <h3 className="font-bebas text-2xl text-blue-900 tracking-wide uppercase">{selectedMatch.awayTeamName} XI</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {selectedMatch.awayLineup?.starting11.length ? (
+                        selectedMatch.awayLineup.starting11.map(id => {
+                          const stats = getPlayerStats(id);
+                          return (
+                            <div key={id} className="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 hover:border-blue-200 transition-all shadow-sm group">
+                              <span className="text-xs font-black text-slate-700 uppercase">{getPlayerName(id, 'away')}</span>
+                              <div className="flex items-center gap-1.5">
+                                {stats.goals > 0 && Array(stats.goals).fill(0).map((_, i) => (
+                                  <Zap key={i} className="h-3 w-3 text-emerald-500 fill-emerald-500" />
+                                ))}
+                                {stats.cards.map((c, i) => (
+                                  <div key={i} className={`w-2 h-3 rounded-xs ${c.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} shadow-xs`} />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : <p className="text-xs text-slate-400 italic bg-slate-50 p-4 rounded-xl">Squad list pending submission...</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const renderGroupTable = (groupName: string, groupStandings: GroupStanding[]) => (
     <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200/60 mb-6 sm:mb-8">
@@ -154,12 +445,24 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                       {grouped[roundName].map(match => {
                         const { date, time } = formatMatchDateTime(match.matchDate);
                         return (
-                          <div key={match._id} className="border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50/50 hover:bg-white transition shadow-sm">
+                          <div 
+                            key={match._id} 
+                            onClick={() => handleMatchClick(match)}
+                            className="border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50/50 hover:bg-white transition shadow-sm cursor-pointer hover:border-emerald-300 group"
+                          >
                             <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] sm:text-[10px] font-bold text-gray-500 uppercase mb-2 sm:mb-3">
-                              <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
-                                {match.stage} {match.group ? `- Group ${match.group}` : ''}
-                                {match.round && match.round !== roundName ? ` - ${match.round}` : ''}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                                  {match.stage} {match.group ? `- Group ${match.group}` : ''}
+                                  {match.round && match.round !== roundName ? ` - ${match.round}` : ''}
+                                </span>
+                                {match.status === "Live" && (
+                                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                                    <span className="w-1.5 h-1.5 bg-white rounded-full" />
+                                    LIVE
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-2">
                                 <Clock className="h-3 w-3" />
                                 <span>{date}</span>
@@ -168,9 +471,9 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                             
                             {/* Match Time Display */}
                             <div className="flex justify-center mb-3 sm:mb-4">
-                              <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5">
-                                <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                                <span>Kick-off: {time}</span>
+                              <div className={`${match.status === "Live" ? "bg-red-50 text-red-600 border border-red-200" : "bg-emerald-50 text-emerald-700"} px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5`}>
+                                <Clock className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${match.status === "Live" ? "animate-pulse" : ""}`} />
+                                <span>{match.status === "Live" ? `Match Time: ${getLiveTime(match)}` : `Kick-off: ${time}`}</span>
                               </div>
                             </div>
                             
@@ -192,11 +495,13 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                               
                               {/* Score / VS */}
                               <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
-                                {match.status === "Completed" ? (
-                                  <div className="flex items-center justify-center gap-1 sm:gap-2 font-black text-lg sm:text-2xl text-[#0a3d0a] bg-emerald-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg">
-                                    <span>{match.homeScore}</span>
+                                {match.status === "Completed" || match.status === "Live" ? (
+                                  <div className={`flex items-center justify-center gap-1 sm:gap-2 font-black text-lg sm:text-2xl px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg ${
+                                    match.status === "Live" ? "text-red-600 bg-red-50 animate-pulse border border-red-200" : "text-[#0a3d0a] bg-emerald-50"
+                                  }`}>
+                                    <span>{match.homeScore ?? 0}</span>
                                     <span className="text-gray-400 text-base sm:text-xl">-</span>
-                                    <span>{match.awayScore}</span>
+                                    <span>{match.awayScore ?? 0}</span>
                                   </div>
                                 ) : (
                                   <div className="bg-slate-200 text-slate-500 text-[10px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold inline-block">
@@ -270,14 +575,25 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                   {matches.slice(0, 10).map(match => {
                     const { date, time } = formatMatchDateTime(match.matchDate);
                     return (
-                      <div key={match._id} className="border border-slate-200 rounded-xl p-2 sm:p-3 bg-slate-50/50 hover:bg-white transition shadow-sm">
+                      <div 
+                        key={match._id} 
+                        onClick={() => handleMatchClick(match)}
+                        className="border border-slate-200 rounded-xl p-2 sm:p-3 bg-slate-50/50 hover:bg-white transition shadow-sm cursor-pointer hover:border-emerald-300"
+                      >
                         <div className="flex items-center justify-between text-[8px] sm:text-[9px] font-bold text-gray-500 uppercase mb-2">
-                          <span className="bg-slate-200 text-slate-700 px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[9px]">
-                            {match.stage}
-                          </span>
                           <div className="flex items-center gap-1">
-                            <Clock className="h-2.5 w-2.5" />
-                            <span>{time}</span>
+                            <span className="bg-slate-200 text-slate-700 px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[9px]">
+                              {match.stage}
+                            </span>
+                            {match.status === "Live" && (
+                              <span className="bg-red-500 text-white px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[9px] animate-pulse">
+                                LIVE
+                              </span>
+                            )}
+                          </div>
+                          <div className={`flex items-center gap-1 ${match.status === "Live" ? "text-red-600 font-mono" : ""}`}>
+                            <Clock className={`h-2.5 w-2.5 ${match.status === "Live" ? "animate-pulse" : ""}`} />
+                            <span>{match.status === "Live" ? getLiveTime(match) : time}</span>
                           </div>
                         </div>
                         
@@ -302,11 +618,13 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                           </div>
                           
                           <div className="flex-shrink-0 text-center">
-                            {match.status === "Completed" ? (
-                              <div className="flex items-center gap-0.5 sm:gap-1 font-black text-xs sm:text-sm text-[#0a3d0a]">
-                                <span>{match.homeScore}</span>
+                            {match.status === "Completed" || match.status === "Live" ? (
+                              <div className={`flex items-center gap-0.5 sm:gap-1 font-black text-xs sm:text-sm ${
+                                match.status === "Live" ? "text-red-600 animate-pulse" : "text-[#0a3d0a]"
+                              }`}>
+                                <span>{match.homeScore ?? 0}</span>
                                 <span className="text-gray-300 text-[10px] sm:text-xs">-</span>
-                                <span>{match.awayScore}</span>
+                                <span>{match.awayScore ?? 0}</span>
                               </div>
                             ) : (
                               <div className="bg-slate-200 text-slate-500 text-[8px] sm:text-[10px] px-1 sm:px-2 py-0.5 sm:py-1 rounded font-bold">VS</div>
@@ -353,6 +671,108 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                   )}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STATISTICS TAB VIEW */}
+      {activeTab === "tournament" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* TOP SCORERS - GOLDEN BOOT RACE */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-200 overflow-hidden">
+              <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                <div className="p-2 bg-amber-50 rounded-xl">
+                  <Trophy className="h-6 w-6 text-amber-500" />
+                </div>
+                <h3 className="font-bebas text-2xl text-slate-800 tracking-wider uppercase">Golden Boot Race</h3>
+              </div>
+
+              <div className="space-y-3">
+                {stats.topScorers.length === 0 ? (
+                  <p className="text-center py-8 text-xs text-slate-400 font-bold uppercase">No goals recorded yet</p>
+                ) : stats.topScorers.map((s, i) => (
+                  <div key={i} className="flex items-center justify-between p-3.5 bg-slate-50/50 rounded-2xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
+                    <div className="flex items-center gap-3">
+                      <span className={`w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-black ${i < 3 ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-500'}`}>
+                        {i + 1}
+                      </span>
+                      <img src={s.teamLogo} className="w-8 h-8 rounded-full border bg-white object-cover" />
+                      <div>
+                        <p className="text-xs font-black text-slate-800 uppercase leading-tight">{s.name}</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{s.team}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-xl border border-slate-200 shadow-sm group-hover:border-amber-300 transition-colors">
+                      <Zap className="h-3 w-3 text-amber-500 fill-amber-500" />
+                      <span className="text-sm font-black text-slate-700">{s.goals}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* DISCIPLINARY & SUSPENSIONS */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
+                <div className="p-2 bg-red-50 rounded-xl">
+                  <ShieldAlert className="h-6 w-6 text-red-500" />
+                </div>
+                <h3 className="font-bebas text-2xl text-slate-800 tracking-wider uppercase">Disciplinary & Suspensions</h3>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                    <tr>
+                      <th className="pb-3 pl-2">Player</th>
+                      <th className="pb-3">Card</th>
+                      <th className="pb-3">Issued On</th>
+                      <th className="pb-3 text-right pr-2">Status / Suspension</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {stats.disciplinary.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="py-12 text-center text-xs text-slate-400 font-bold uppercase tracking-widest">
+                          Clean tournament — No cards issued
+                        </td>
+                      </tr>
+                    ) : stats.disciplinary.map((d, i) => (
+                      <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 pl-2">
+                          <div className="flex items-center gap-3">
+                            <img src={d.teamLogo} className="w-7 h-7 rounded-full border bg-white object-cover" />
+                            <div>
+                              <p className="text-xs font-bold text-slate-800 uppercase">{d.playerName}</p>
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{d.teamName}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4">
+                          <div className={`w-4 h-6 rounded-sm shadow-sm ${d.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} border-2 border-white`} title={d.type} />
+                        </td>
+                        <td className="py-4 text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+                          {new Date(d.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </td>
+                        <td className="py-4 text-right pr-2">
+                          {d.type === 'Red' ? (
+                            <div className="inline-flex flex-col items-end">
+                              <span className="text-[9px] font-black bg-red-600 text-white px-2 py-0.5 rounded uppercase tracking-widest mb-1">Suspended</span>
+                              <span className="text-[9px] font-bold text-slate-400 italic leading-none">Missing: {d.matchMissed}</span>
+                            </div>
+                          ) : (
+                            <span className="text-[9px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase tracking-widest">Active</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@ import {
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
 import { TournamentManager } from "../components/TournamentManager.js";
+import { Modal } from "../components/Modal.js";
 import { Team, Player, Official } from "../types.js";
 import tournamentLogo from "../assets/logo.jpeg";
 
@@ -40,6 +41,16 @@ export const AdminPage: React.FC = () => {
   const [deletingPlayerId, setDeletingPlayerId] = useState<string | null>(null);
   const [deletingOfficialId, setDeletingOfficialId] = useState<string | null>(null);
   const [deletingTeamId, setDeletingTeamId] = useState<string | null>(null);
+
+  // Modal state
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: "info" | "success" | "warning" | "error" | "confirm";
+    onConfirm?: () => void;
+    isDangerous?: boolean;
+  }>({ isOpen: false, title: "", message: "", type: "info" });
 
   useEffect(() => {
     if (isAdmin && authToken) {
@@ -101,64 +112,88 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  const handleRemovePlayer = async (playerId: string) => {
-    if (!window.confirm("Are you absolutely sure you want to delete this player card? This action is irreversible.")) return;
-    setDeletingPlayerId(playerId);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/players/${playerId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "Delete rejected.");
+  const handleRemovePlayer = (playerId: string) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Remove Player",
+      message: "Are you absolutely sure you want to delete this player card? This action is irreversible.",
+      type: "confirm",
+      isDangerous: true,
+      onConfirm: async () => {
+        setDeletingPlayerId(playerId);
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/players/${playerId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || "Delete rejected.");
+          }
+          await loadAdminRecords();
+        } catch (err: any) {
+          setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
+        } finally {
+          setDeletingPlayerId(null);
+        }
       }
-      await loadAdminRecords();
-    } catch (err: any) {
-      alert("Error: " + err.message);
-    } finally {
-      setDeletingPlayerId(null);
-    }
+    });
   };
 
-  const handleRemoveOfficial = async (officialId: string) => {
-    if (!window.confirm("Are you sure you want to delete this official's badge?")) return;
-    setDeletingOfficialId(officialId);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/officials/${officialId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "Delete rejected.");
+  const handleRemoveOfficial = (officialId: string) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Remove Official",
+      message: "Are you sure you want to delete this official's badge?",
+      type: "confirm",
+      isDangerous: true,
+      onConfirm: async () => {
+        setDeletingOfficialId(officialId);
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/officials/${officialId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || "Delete rejected.");
+          }
+          await loadAdminRecords();
+        } catch (err: any) {
+          setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
+        } finally {
+          setDeletingOfficialId(null);
+        }
       }
-      await loadAdminRecords();
-    } catch (err: any) {
-      alert("Error: " + err.message);
-    } finally {
-      setDeletingOfficialId(null);
-    }
+    });
   };
 
-  const handleRemoveTeam = async (teamId: string) => {
-    if (!window.confirm("WARNING: Deleting this Club/Team will instantly wipe their login, all player cards and officials. Are you absolutely certain?")) return;
-    setDeletingTeamId(teamId);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/teams/${teamId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.message || "Action rejected.");
+  const handleRemoveTeam = (teamId: string) => {
+    setModalConfig({
+      isOpen: true,
+      title: "Delete Club",
+      message: "WARNING: Deleting this Club/Team will instantly wipe their login, all player cards and officials. Are you absolutely certain?",
+      type: "confirm",
+      isDangerous: true,
+      onConfirm: async () => {
+        setDeletingTeamId(teamId);
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/teams/${teamId}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.message || "Action rejected.");
+          }
+          await loadAdminRecords();
+        } catch (err: any) {
+          setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
+        } finally {
+          setDeletingTeamId(null);
+        }
       }
-      await loadAdminRecords();
-    } catch (err: any) {
-      alert("Error Deleting Team: " + err.message);
-    } finally {
-      setDeletingTeamId(null);
-    }
+    });
   };
 
   const handleAdminLogout = () => {
@@ -640,6 +675,16 @@ export const AdminPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      <Modal
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={modalConfig.onConfirm}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        isDangerous={modalConfig.isDangerous}
+      />
     </div>
   );
 };
