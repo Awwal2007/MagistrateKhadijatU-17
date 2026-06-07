@@ -627,7 +627,7 @@ export const ClubPortal: React.FC = () => {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-3">
         <RefreshCw className="h-8 w-8 text-[#0a3d0a] animate-spin" />
-        <span className="text-xs font-semibold text-[#0a3d0a] uppercase tracking-widest">Compiling Team Roster Ledger...</span>
+        <span className="text-xs font-semibold text-[#0a3d0a] uppercase tracking-widest">Compiling Team Roster ...</span>
       </div>
     );
   }
