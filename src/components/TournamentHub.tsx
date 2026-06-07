@@ -74,8 +74,8 @@ const TacticalPitch: React.FC<{
   );
 };
 
-interface TournamentHubProps {
-  authToken: string;
+export interface TournamentHubProps {
+  authToken?: string;
   activeTab: "tournament" | "fixtures";
 }
 
@@ -83,8 +83,14 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   const [standings, setStandings] = useState<{ A: GroupStanding[]; B: GroupStanding[]; C: GroupStanding[] }>({ A: [], B: [], C: [] });
   const [matches, setMatches] = useState<Match[]>([]);
   const [activeSide, setActiveSide] = useState<"home" | "away">("home");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    setSelectedMatch(null);
+    setError(null);
+  }, [activeTab]);
 
   // Match Detail Modal State
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -103,9 +109,9 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   }>({ topScorers: [], disciplinary: [] });
 
   useEffect(() => {
-    loadData();
+    loadData(false);
     // Periodically sync match data for real-time score updates
-    const interval = setInterval(loadData, 20000); 
+    const interval = setInterval(() => loadData(true), 20000); 
     return () => clearInterval(interval);
   }, [authToken]);
 
@@ -120,15 +126,20 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     setLoadingRosters(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     try {
+      const headers: Record<string, string> = authToken ? { Authorization: `Bearer ${authToken}` } : {};
       const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches/${match._id}/rosters`, {
-        headers: { Authorization: `Bearer ${authToken}` }
+        headers
       });
       if (res.ok) {
         const data = await res.json();
         setRosters({ home: data.homePlayers, away: data.awayPlayers });
+      } else if (res.status === 401 || res.status === 403) {
+        console.error("Match rosters are restricted. Backend likely requires authentication for this endpoint.");
+        setError("Roster data is currently restricted by the administrator.");
       }
     } catch (err) {
       console.error("Error loading rosters:", err);
+      setError("Network error while retrieving match rosters.");
     } finally {
       setLoadingRosters(false);
     }
@@ -157,31 +168,41 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     } catch (e) { return ""; }
   };
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (isSync = false) => {
+    if (!isSync) setLoading(true);
+    setError(null);
     try {
+      const headers: Record<string, string> = (authToken && authToken.trim() !== "") 
+        ? { Authorization: `Bearer ${authToken}` } 
+        : {};
       const [standingsRes, matchesRes, statsRes] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL || ""}/api/standings`, { headers: { Authorization: `Bearer ${authToken}` } }),
-        fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches`, { headers: { Authorization: `Bearer ${authToken}` } }),
-        fetch(`${import.meta.env.VITE_API_URL || ""}/api/stats`, { headers: { Authorization: `Bearer ${authToken}` } })
+        fetch(`${import.meta.env.VITE_API_URL || ""}/api/standings`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches`, { headers }),
+        fetch(`${import.meta.env.VITE_API_URL || ""}/api/stats`, { headers })
       ]);
 
+      if (!standingsRes.ok || !matchesRes.ok || !statsRes.ok) {
+        if (!isSync) setError("Database synchronization failure: The tournament registry responded with an error. Please ensure public access is enabled in the backend.");
+        return;
+      }
+
       if (statsRes.ok) {
-        const statsData = await statsRes.json();
+        const statsData = await statsRes.json().catch(() => ({ topScorers: [], disciplinary: [] }));
         setStats(statsData);
       }
 
       if (standingsRes.ok) {
-        const sData = await standingsRes.json();
+        const sData = await standingsRes.json().catch(() => ({ standings: { A: [], B: [], C: [] } }));
         setStandings(sData.standings || { A: [], B: [], C: [] });
       }
 
       if (matchesRes.ok) {
-        const mData = await matchesRes.json();
+        const mData = await matchesRes.json().catch(() => ({ matches: [] }));
         setMatches(mData.matches || []);
       }
     } catch (err) {
       console.error(err);
+      if (!isSync) setError("Connectivity loss: Unable to reach tournament registry.");
     } finally {
       setLoading(false);
     }
@@ -426,8 +447,16 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     const { grouped, roundOrder } = getGroupedMatches();
     return (
       <div className="space-y-6 animate-fade-in">
-        {loading ? (
-          <div className="py-10 text-center text-slate-500 text-xs">Loading fixtures...</div>
+        {loading && matches.length === 0 ? (
+          <div className="py-20 text-center flex flex-col items-center gap-3">
+            <RefreshCw className="h-8 w-8 text-[#0a3d0a] animate-spin" />
+            <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Synchronizing Match Schedule...</p>
+          </div>
+        ) : error ? (
+           <div className="py-12 text-center text-red-500 bg-red-50 rounded-3xl border border-red-100 px-6">
+             <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+             <p className="text-xs font-bold uppercase tracking-wider">{error}</p>
+           </div>
         ) : (
           <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200/60">
             <h3 className="font-bebas text-xl sm:text-2xl text-[#0a3d0a] tracking-wider uppercase mb-4 sm:mb-6 flex items-center gap-2">
@@ -557,8 +586,16 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   // Default: Show standings with fixtures on the side
   return (
     <div className="space-y-6 sm:space-y-8 animate-fade-in">
-      {loading ? (
-        <div className="py-10 text-center text-slate-500 text-xs">Loading tournament data...</div>
+      {loading && matches.length === 0 ? (
+        <div className="py-20 text-center flex flex-col items-center gap-3">
+          <RefreshCw className="h-8 w-8 text-[#0a3d0a] animate-spin" />
+          <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">Loading Tournament Records...</p>
+        </div>
+      ) : error ? (
+        <div className="py-12 text-center text-red-500 bg-red-50 rounded-3xl border border-red-100 px-6">
+          <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+          <p className="text-xs font-bold uppercase tracking-wider">{error}</p>
+        </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
