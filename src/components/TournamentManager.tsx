@@ -958,6 +958,16 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
           )}
         </div>
       )}
+
+      <Modal
+        isOpen={modalConfig.isOpen}
+        onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={modalConfig.onConfirm}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        isDangerous={modalConfig.isDangerous}
+      />
     </div>
   );
 };

@@ -806,7 +806,8 @@ export const AdminPage: React.FC = () => {
                   <TournamentManager 
                     teams={fullTeamsList} 
                     authToken={authToken || ""} 
-                    onRefreshTeams={loadAdminRecords} 
+                    onRefreshTeams={loadAdminRecords}
+                    onViewMatch={(m) => setViewingMatch(m)}
                   />
                 )}
 
