@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Match, GroupStanding, Player } from "../types.js";
 import { Modal } from "./Modal.js";
-import { Trophy, Calendar, MapPin, Clock, Layers, Users, ShieldAlert, Zap, AlertTriangle, ArrowLeft, RefreshCw, Eye } from "lucide-react";
+import { Trophy, Calendar, MapPin, Clock, Layers, Users, ShieldAlert, Zap, AlertTriangle, ArrowLeft, RefreshCw, Eye, Pencil } from "lucide-react";
 
 const FORMATIONS: Record<string, { def: number; mid: number; fwd: number }> = {
   "4-4-2": { def: 4, mid: 4, fwd: 2 },
@@ -24,7 +24,7 @@ const TacticalPitch: React.FC<{
   const renderRow = (startIndex: number, count: number, label: string) => {
     const items = [];
     for (let i = 0; i < count; i++) {
-      const playerId = lineup.starting11[startIndex + i];
+      const playerId = lineup.starting11?.[startIndex + i];
       const p = allPlayers.find(player => player._id === playerId);
       const stats = playerId ? getPlayerStats(playerId) : { goals: 0, cards: [] };
 
@@ -58,6 +58,15 @@ const TacticalPitch: React.FC<{
     return <div className="flex justify-around items-center w-full z-10 min-h-[60px]">{items}</div>;
   };
   
+  // FIXED: Check if starting11 exists before accessing indices
+  if (!lineup.starting11 || lineup.starting11.length === 0) {
+    return (
+      <div className="relative aspect-[3/4] w-full bg-emerald-600 rounded-3xl overflow-hidden border-4 border-white/20 shadow-2xl flex flex-col items-center justify-center p-4 sm:p-8">
+        <p className="text-white text-center">Lineup not available</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="relative aspect-[3/4] w-full bg-emerald-600 rounded-3xl overflow-hidden border-4 border-white/20 shadow-2xl flex flex-col justify-between p-4 sm:p-8">
       <div className="absolute inset-0 pointer-events-none">
@@ -77,20 +86,16 @@ const TacticalPitch: React.FC<{
 export interface TournamentHubProps {
   authToken?: string;
   activeTab: "tournament" | "fixtures";
+  onEditMatch?: (match: Match) => void;
 }
 
-export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeTab }) => {
+export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeTab, onEditMatch }) => {
   const [standings, setStandings] = useState<{ A: GroupStanding[]; B: GroupStanding[]; C: GroupStanding[] }>({ A: [], B: [], C: [] });
   const [matches, setMatches] = useState<Match[]>([]);
   const [activeSide, setActiveSide] = useState<"home" | "away">("home");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    setSelectedMatch(null);
-    setError(null);
-  }, [activeTab]);
 
   // Match Detail Modal State
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
@@ -108,6 +113,12 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     }>
   }>({ topScorers: [], disciplinary: [] });
 
+  // FIXED: Moved useEffect before it was using selectedMatch
+  useEffect(() => {
+    setSelectedMatch(null);
+    setError(null);
+  }, [activeTab]);
+
   useEffect(() => {
     loadData(false);
     // Periodically sync match data for real-time score updates
@@ -119,6 +130,14 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // FIXED: Moved getPlayerStats before it's used in TacticalPitch
+  const getPlayerStats = (playerId: string) => {
+    if (!selectedMatch) return { goals: 0, cards: [] };
+    const playerGoals = selectedMatch.goals?.filter(g => g.playerId === playerId).length || 0;
+    const playerCards = selectedMatch.cards?.filter(c => c.playerId === playerId) || [];
+    return { goals: playerGoals, cards: playerCards };
+  };
 
   const handleMatchClick = async (match: Match) => {
     setSelectedMatch(match);
@@ -132,7 +151,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
       });
       if (res.ok) {
         const data = await res.json();
-        setRosters({ home: data.homePlayers, away: data.awayPlayers });
+        setRosters({ home: data.homePlayers || [], away: data.awayPlayers || [] });
       } else if (res.status === 401 || res.status === 403) {
         console.error("Match rosters are restricted. Backend likely requires authentication for this endpoint.");
         setError("Roster data is currently restricted by the administrator.");
@@ -155,13 +174,6 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     return "Unknown Player";
   };
 
-  const getPlayerStats = (playerId: string) => {
-    if (!selectedMatch) return { goals: 0, cards: [] };
-    const playerGoals = selectedMatch.goals?.filter(g => g.playerId === playerId).length || 0;
-    const playerCards = selectedMatch.cards?.filter(c => c.playerId === playerId) || [];
-    return { goals: playerGoals, cards: playerCards };
-  };
-
   const formatEventTime = (timestamp: string) => {
     try {
       return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -181,11 +193,6 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
         fetch(`${import.meta.env.VITE_API_URL || ""}/api/stats`, { headers })
       ]);
 
-      if (!standingsRes.ok || !matchesRes.ok || !statsRes.ok) {
-        if (!isSync) setError("Database synchronization failure: The tournament registry responded with an error. Please ensure public access is enabled in the backend.");
-        return;
-      }
-
       if (statsRes.ok) {
         const statsData = await statsRes.json().catch(() => ({ topScorers: [], disciplinary: [] }));
         setStats(statsData);
@@ -194,17 +201,25 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
       if (standingsRes.ok) {
         const sData = await standingsRes.json().catch(() => ({ standings: { A: [], B: [], C: [] } }));
         setStandings(sData.standings || { A: [], B: [], C: [] });
+      } else if (!isSync) {
+        setError("Database synchronization failure: The tournament registry responded with an error. Please ensure public access is enabled in the backend.");
+        if (!isSync) setLoading(false);
+        return;
       }
 
       if (matchesRes.ok) {
         const mData = await matchesRes.json().catch(() => ({ matches: [] }));
         setMatches(mData.matches || []);
+      } else if (!isSync) {
+        setError("Database synchronization failure: The tournament registry responded with an error. Please ensure public access is enabled in the backend.");
+        if (!isSync) setLoading(false);
+        return;
       }
     } catch (err) {
       console.error(err);
       if (!isSync) setError("Connectivity loss: Unable to reach tournament registry.");
     } finally {
-      setLoading(false);
+      if (!isSync) setLoading(false);
     }
   };
 
@@ -265,6 +280,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
         {/* Match Center Header */}
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
           <div className="green-mesh p-8 sm:p-12 text-white relative">
+            {onEditMatch && (
+              <button 
+                onClick={() => onEditMatch(selectedMatch)}
+                className="absolute top-6 right-6 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white p-3 rounded-2xl border border-white/20 transition-all z-20 group"
+                title="Edit Fixture"
+              >
+                <Pencil className="h-5 w-5 transition-transform group-hover:scale-110" />
+              </button>
+            )}
             <div className="relative z-10 flex flex-col items-center gap-8">
               <div className="flex items-center justify-between w-full max-w-4xl gap-4 sm:gap-12">
                 <div className="flex-1 flex flex-col items-center text-center gap-4">
@@ -369,19 +393,22 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                     </button>
                   </div>
 
-                  { (activeSide === 'home' ? selectedMatch.homeLineup : selectedMatch.awayLineup)?.starting11?.length ? (
-                    <TacticalPitch 
-                      lineup={activeSide === 'home' ? selectedMatch.homeLineup : selectedMatch.awayLineup}
-                      allPlayers={activeSide === 'home' ? rosters.home : rosters.away}
-                      theme={activeSide === 'home' ? 'emerald' : 'blue'}
-                      getPlayerStats={getPlayerStats}
-                    />
-                  ) : (
-                    <div className="aspect-[3/4] bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-center">
-                      <ShieldAlert className="h-12 w-12 text-slate-200 mb-4" />
-                      <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Lineup Pending Submission</p>
-                    </div>
-                  )}
+                  {(() => {
+                    const lineup = activeSide === 'home' ? selectedMatch.homeLineup : selectedMatch.awayLineup;
+                    return lineup?.starting11?.length ? (
+                      <TacticalPitch 
+                        lineup={lineup}
+                        allPlayers={activeSide === 'home' ? rosters.home : rosters.away}
+                        theme={activeSide === 'home' ? 'emerald' : 'blue'}
+                        getPlayerStats={getPlayerStats}
+                      />
+                    ) : (
+                      <div className="aspect-[3/4] bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-center">
+                        <ShieldAlert className="h-12 w-12 text-slate-200 mb-4" />
+                        <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">Lineup Pending Submission</p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -487,94 +514,103 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                       {grouped[roundName].map(match => {
                         const { date, time } = formatMatchDateTime(match.matchDate);
                         return (
-                          <div 
-                            key={match._id} 
-                            onClick={() => handleMatchClick(match)}
-                            className="border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50/50 hover:bg-white transition shadow-sm cursor-pointer hover:border-emerald-300 group"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] sm:text-[10px] font-bold text-gray-500 uppercase mb-2 sm:mb-3">
-                              <div className="flex items-center gap-1.5">
-                                <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
-                                  {match.stage} {match.group ? `- Group ${match.group}` : ''}
-                                  {match.round && match.round !== roundName ? ` - ${match.round}` : ''}
-                                </span>
-                                {match.status === "Live" && (
-                                  <span className="bg-red-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
-                                    <span className="w-1.5 h-1.5 bg-white rounded-full" />
-                                    LIVE
+                          <div key={match._id} className="relative group">
+                            <div 
+                              onClick={() => handleMatchClick(match)}
+                              className="border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50/50 hover:bg-white transition shadow-sm cursor-pointer hover:border-emerald-300"
+                            >
+                              {onEditMatch && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onEditMatch(match); }}
+                                  className="absolute top-3 right-3 p-2 bg-white rounded-lg shadow-sm border border-slate-100 text-slate-400 hover:text-emerald-600 transition-colors z-10"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] sm:text-[10px] font-bold text-gray-500 uppercase mb-2 sm:mb-3">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                                    {match.stage} {match.group ? `- Group ${match.group}` : ''}
+                                    {match.round && match.round !== roundName ? ` - ${match.round}` : ''}
                                   </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-3 w-3" />
-                                <span>{date}</span>
-                              </div>
-                            </div>
-                            
-                            {/* Match Time Display */}
-                            <div className="flex justify-center mb-3 sm:mb-4">
-                              <div className={`${match.status === "Live" ? "bg-red-50 text-red-600 border border-red-200" : "bg-emerald-50 text-emerald-700"} px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5`}>
-                                <Clock className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${match.status === "Live" ? "animate-pulse" : ""}`} />
-                                <span>{match.status === "Live" ? `Match Time: ${getLiveTime(match)}` : `Kick-off: ${time}`}</span>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center justify-between gap-2 sm:gap-4">
-                              {/* Home Team */}
-                              <div className="flex-1 text-center">
-                                <div className="flex justify-center mb-1 sm:mb-2">
-                                  <img 
-                                    src={match.homeTeamLogo} 
-                                    alt={match.homeTeamName} 
-                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(match.homeTeamName || "")}&background=0a3d0a&color=fff&rounded=true&size=48`;
-                                    }}
-                                  />
+                                  {match.status === "Live" && (
+                                    <span className="bg-red-500 text-white px-2 py-0.5 rounded-full flex items-center gap-1 animate-pulse">
+                                      <span className="w-1.5 h-1.5 bg-white rounded-full" />
+                                      LIVE
+                                    </span>
+                                  )}
                                 </div>
-                                <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{match.homeTeamName}</span>
-                              </div>
-                              
-                              {/* Score / VS */}
-                              <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
-                                {match.status === "Completed" || match.status === "Live" ? (
-                                  <div className={`flex items-center justify-center gap-1 sm:gap-2 font-black text-lg sm:text-2xl px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg ${
-                                    match.status === "Live" ? "text-red-600 bg-red-50 animate-pulse border border-red-200" : "text-[#0a3d0a] bg-emerald-50"
-                                  }`}>
-                                    <span>{match.homeScore ?? 0}</span>
-                                    <span className="text-gray-400 text-base sm:text-xl">-</span>
-                                    <span>{match.awayScore ?? 0}</span>
-                                  </div>
-                                ) : (
-                                  <div className="bg-slate-200 text-slate-500 text-[10px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold inline-block">
-                                    VS
-                                  </div>
-                                )}
-                              </div>
-      
-                              {/* Away Team */}
-                              <div className="flex-1 text-center">
-                                <div className="flex justify-center mb-1 sm:mb-2">
-                                  <img 
-                                    src={match.awayTeamLogo} 
-                                    alt={match.awayTeamName} 
-                                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(match.awayTeamName || "")}&background=0a3d0a&color=fff&rounded=true&size=48`;
-                                    }}
-                                  />
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3 w-3" />
+                                  <span>{date}</span>
                                 </div>
-                                <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{match.awayTeamName}</span>
                               </div>
+
+                              {/* Match Time Display */}
+                              <div className="flex justify-center mb-3 sm:mb-4">
+                                <div className={`${match.status === "Live" ? "bg-red-50 text-red-600 border border-red-200" : "bg-emerald-50 text-emerald-700"} px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5`}>
+                                  <Clock className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${match.status === "Live" ? "animate-pulse" : ""}`} />
+                                  <span>{match.status === "Live" ? `Match Time: ${getLiveTime(match)}` : `Kick-off: ${time}`}</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 sm:gap-4">
+                                {/* Home Team */}
+                                <div className="flex-1 text-center">
+                                  <div className="flex justify-center mb-1 sm:mb-2">
+                                    <img
+                                      src={match.homeTeamLogo}
+                                      alt={match.homeTeamName}
+                                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(match.homeTeamName || "")}&background=0a3d0a&color=fff&rounded=true&size=48`;
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{match.homeTeamName}</span>
+                                </div>
+
+                                {/* Score / VS */}
+                                <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
+                                  {match.status === "Completed" || match.status === "Live" ? (
+                                    <div className={`flex items-center justify-center gap-1 sm:gap-2 font-black text-lg sm:text-2xl px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg ${
+                                      match.status === "Live" ? "text-red-600 bg-red-50 animate-pulse border border-red-200" : "text-[#0a3d0a] bg-emerald-50"
+                                    }`}>
+                                      <span>{match.homeScore ?? 0}</span>
+                                      <span className="text-gray-400 text-base sm:text-xl">-</span>
+                                      <span>{match.awayScore ?? 0}</span>
+                                    </div>
+                                  ) : (
+                                    <div className="bg-slate-200 text-slate-500 text-[10px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold inline-block">
+                                      VS
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Away Team */}
+                                <div className="flex-1 text-center">
+                                  <div className="flex justify-center mb-1 sm:mb-2">
+                                    <img
+                                      src={match.awayTeamLogo}
+                                      alt={match.awayTeamName}
+                                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(match.awayTeamName || "")}&background=0a3d0a&color=fff&rounded=true&size=48`;
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{match.awayTeamName}</span>
+                                </div>
+                              </div>
+
+                              {/* Venue (if available) */}
+                              {match.venue && (
+                                <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-slate-100 flex items-center justify-center gap-1 text-[9px] sm:text-[10px] text-slate-400">
+                                  <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                  <span>{match.venue}</span>
+                                </div>
+                              )}
                             </div>
-      
-                            {/* Venue (if available) */}
-                            {match.venue && (
-                              <div className="mt-2 sm:mt-3 pt-2 sm:pt-3 border-t border-slate-100 flex items-center justify-center gap-1 text-[9px] sm:text-[10px] text-slate-400">
-                                <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                                <span>{match.venue}</span>
-                              </div>
-                            )}
                           </div>
                         );
                       })}

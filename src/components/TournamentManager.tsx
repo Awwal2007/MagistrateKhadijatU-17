@@ -3,7 +3,7 @@ import { Match, Team, Player } from "../types.js";
 import {
   Trophy, Calendar, Plus, Trash2, Shield, CalendarDays,
   RefreshCw, CheckCircle, Clock, ChevronDown, Swords, Star,
-  AlertCircle, Layers, Zap, Eye
+  AlertCircle, Layers, Zap, Eye, Pencil, Edit2, X
 } from "lucide-react";
 import { LiveScoringBoard } from "./LiveScoringBoard.js";
 import { Modal } from "./Modal.js";
@@ -66,6 +66,17 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   // Score editing local state: matchId -> { home, away }
   const [scoreEdits, setScoreEdits] = useState<Record<string, { home: string; away: string }>>({});
   const [savingScore, setSavingScore] = useState<string | null>(null);
+
+  // Edit Match Details State
+  const [editingMatch, setEditingMatch] = useState<Match | null>(null);
+  const [editHome, setEditHome] = useState("");
+  const [editAway, setEditAway] = useState("");
+  const [editStage, setEditStage] = useState<"Group Stage" | "Quarter Final" | "Semi Final" | "Final">("Group Stage");
+  const [editGroup, setEditGroup] = useState<"A" | "B" | "C" | "">("");
+  const [editRound, setEditRound] = useState("");
+  const [editDate, setEditDate] = useState("");
+  const [editTime, setEditTime] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   // New Match Form
   const [newMatchHome,  setNewMatchHome]  = useState("");
@@ -221,6 +232,51 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
       if (match._id === selectedLiveMatchId) setSelectedLiveMatchId(null);
     } finally {
       setSavingScore(null);
+    }
+  };
+
+  const startEditingMatch = (match: Match) => {
+    setEditingMatch(match);
+    setEditHome(match.homeTeamId);
+    setEditAway(match.awayTeamId);
+    setEditStage(match.stage as any);
+    setEditGroup((match.group || "") as any);
+    setEditRound(match.round || "");
+    
+    const d = new Date(match.matchDate);
+    setEditDate(d.toISOString().split('T')[0]);
+    setEditTime(d.toTimeString().slice(0, 5));
+  };
+
+  const handleUpdateMatchDetails = async () => {
+    if (!editingMatch) return;
+    if (editHome === editAway) {
+      setModalConfig({ isOpen: true, title: "Validation Error", message: "Home and away teams cannot be the same.", type: "warning" });
+      return;
+    }
+    setUpdating(true);
+    try {
+      const matchDate = editTime ? `${editDate}T${editTime}` : editDate;
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${editingMatch._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({
+          homeTeamId: editHome,
+          awayTeamId: editAway,
+          stage: editStage,
+          group: editGroup === "" ? null : editGroup,
+          round: editRound === "" ? null : editRound,
+          matchDate
+        })
+      });
+      if (!res.ok) throw new Error("Failed to update match details");
+      setEditingMatch(null);
+      loadMatches();
+      onRefreshTeams();
+    } catch (err: any) {
+      setModalConfig({ isOpen: true, title: "Update Error", message: err.message, type: "error" });
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -516,6 +572,13 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
 
                           {/* Right: actions */}
                           <div className="flex items-center gap-2 self-end sm:self-center">
+                            <button
+                              onClick={() => startEditingMatch(match)}
+                              title="Edit Fixture Teams/Date"
+                              className="p-2 rounded-xl border transition text-xs font-bold text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
                             <button
                               onClick={() => onViewMatch?.(match)}
                               title="View Tactical Pitch"
@@ -956,6 +1019,111 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ───── EDIT MATCH MODAL ───── */}
+      {editingMatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-[2rem] w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col">
+            <div className="green-mesh p-6 text-white flex justify-between items-center border-b-4 border-[#FFD700]">
+              <div className="flex items-center gap-3">
+                <Edit2 className="h-5 w-5 text-[#FFD700]" />
+                <h3 className="font-bebas text-2xl tracking-widest uppercase">Edit Fixture Details</h3>
+              </div>
+              <button onClick={() => setEditingMatch(null)} className="p-2 hover:bg-white/10 rounded-full transition"><X className="h-5 w-5" /></button>
+            </div>
+            
+            <div className="p-8 space-y-6 overflow-y-auto max-h-[80vh]">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Stage *</label>
+                  <select
+                    value={editStage}
+                    onChange={(e: any) => setEditStage(e.target.value)}
+                    className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50 focus:outline-none focus:border-[#0a3d0a] focus:ring-1 focus:ring-[#0a3d0a]"
+                  >
+                    <option value="Group Stage">Group Stage</option>
+                    <option value="Quarter Final">Quarter Final</option>
+                    <option value="Semi Final">Semi Final</option>
+                    <option value="Final">Final</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Group</label>
+                  <select
+                    value={editGroup}
+                    onChange={(e: any) => setEditGroup(e.target.value)}
+                    className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50 focus:outline-none focus:border-[#0a3d0a] focus:ring-1 focus:ring-[#0a3d0a]"
+                  >
+                    <option value="">— None —</option>
+                    <option value="A">Group A</option>
+                    <option value="B">Group B</option>
+                    <option value="C">Group C</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Round / Match Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Round 1"
+                  value={editRound}
+                  onChange={(e) => setEditRound(e.target.value)}
+                  className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Home Team *</label>
+                  <select
+                    required
+                    value={editHome}
+                    onChange={(e) => setEditHome(e.target.value)}
+                    className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50"
+                  >
+                    {teams.map(t => <option key={t.id} value={t.id}>{t.clubName}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Away Team *</label>
+                  <select
+                    required
+                    value={editAway}
+                    onChange={(e) => setEditAway(e.target.value)}
+                    className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50"
+                  >
+                    {teams.map(t => <option key={t.id} value={t.id}>{t.clubName}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Match Date *</label>
+                  <input type="date" required value={editDate} onChange={(e) => setEditDate(e.target.value)} className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Kick-off Time</label>
+                  <input type="time" value={editTime} onChange={(e) => setEditTime(e.target.value)} className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-50 border-t flex gap-3">
+              <button onClick={() => setEditingMatch(null)} className="flex-1 py-3 text-xs font-bold uppercase tracking-widest text-slate-500 hover:bg-slate-200 rounded-xl transition">Cancel</button>
+              <button
+                onClick={handleUpdateMatchDetails}
+                disabled={updating}
+                className="flex-[2] py-3 bg-[#0a3d0a] text-[#FFD700] rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition disabled:opacity-60"
+              >
+                {updating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                {updating ? "Saving Changes..." : "Apply Updates"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
