@@ -540,12 +540,13 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                                   min="0"
                                   placeholder="—"
                                   value={homeVal}
+                                  readOnly={isCompleted}
                                   onChange={(e) => setScoreEdits(prev => ({
                                     ...prev,
                                     [match._id]: { home: e.target.value, away: prev[match._id]?.away ?? awayVal }
                                   }))}
                                   className={`w-12 text-center text-lg font-black py-1.5 border rounded-xl transition ${
-                                    isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : "border-slate-200 bg-white"
+                                    isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : isCompleted ? "border-slate-100 bg-slate-50 cursor-not-allowed opacity-60" : "border-slate-200 bg-white"
                                   }`}
                                 />
                                 <span className="text-xl font-black text-slate-300">:</span>
@@ -554,12 +555,13 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                                   min="0"
                                   placeholder="—"
                                   value={awayVal}
+                                  readOnly={isCompleted}
                                   onChange={(e) => setScoreEdits(prev => ({
                                     ...prev,
                                     [match._id]: { home: prev[match._id]?.home ?? homeVal, away: e.target.value }
                                   }))}
                                   className={`w-12 text-center text-lg font-black py-1.5 border rounded-xl transition ${
-                                    isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : "border-slate-200 bg-white"
+                                    isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : isCompleted ? "border-slate-100 bg-slate-50 cursor-not-allowed opacity-60" : "border-slate-200 bg-white"
                                   }`}
                                 />
                               </div>
