@@ -85,7 +85,7 @@ const TacticalPitch: React.FC<{
 
 export interface TournamentHubProps {
   authToken?: string;
-  activeTab: "tournament" | "fixtures";
+  activeTab: "tournament" | "fixtures" | "results";
   onEditMatch?: (match: Match) => void;
 }
 
@@ -242,16 +242,28 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
 
   // Group and sort matches by Round
   const getGroupedMatches = () => {
-    const sorted = [...matches].sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+    let filteredMatches = [...matches];
+
+    if (activeTab === "fixtures") {
+      filteredMatches = matches.filter(m => m.status !== "Completed");
+    } else if (activeTab === "results") {
+      filteredMatches = matches.filter(m => m.status === "Completed");
+    }
+
+    const sorted = filteredMatches.sort((a, b) => {
+      const timeA = new Date(a.matchDate).getTime();
+      const timeB = new Date(b.matchDate).getTime();
+      return activeTab === "results" ? timeB - timeA : timeA - timeB;
+    });
+
     const grouped = sorted.reduce((acc, match) => {
-      const roundName = match.round || "Match Fixtures";
+      const roundName = match.round || (activeTab === "results" ? "Recent Results" : "Match Fixtures");
       if (!acc[roundName]) acc[roundName] = [];
       acc[roundName].push(match);
       return acc;
     }, {} as Record<string, Match[]>);
 
-    // Return rounds in the order they first appear chronologically
-    const roundOrder = Array.from(new Set(sorted.map(m => m.round || "Match Fixtures")));
+    const roundOrder = Array.from(new Set(sorted.map(m => m.round || (activeTab === "results" ? "Recent Results" : "Match Fixtures"))));
     return { grouped, roundOrder };
   };
 
@@ -356,7 +368,10 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                                 </div>
                                 <div className="pt-1">
                                   <p className="text-[10px] font-black text-slate-400 uppercase">{formatEventTime(event.timestamp)}</p>
-                                  <p className="text-sm font-bold text-slate-800">{event.playerName}</p>
+                                  <p className="text-sm font-bold text-slate-800">
+                                    {event.playerName}
+                                    {event.matchTime !== undefined && <span className="ml-1 text-emerald-600 font-black">({Math.floor(event.matchTime / 60)}')</span>}
+                                  </p>
                                   <p className="text-[10px] font-bold text-[#0a3d0a] uppercase tracking-widest">{event.team === 'home' ? selectedMatch.homeTeamName : selectedMatch.awayTeamName}</p>
                                 </div>
                               </div>
@@ -470,7 +485,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   );
 
   // If fixtures tab is active, prioritize showing fixtures prominently
-  if (activeTab === "fixtures") {
+  if (activeTab === "fixtures" || activeTab === "results") {
     const { grouped, roundOrder } = getGroupedMatches();
     return (
       <div className="space-y-6 animate-fade-in">
@@ -494,12 +509,12 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
           <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200/60">
             <h3 className="font-bebas text-xl sm:text-2xl text-[#0a3d0a] tracking-wider uppercase mb-4 sm:mb-6 flex items-center gap-2">
               <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-[#FFD700]" />
-              All Match Fixtures
+              {activeTab === "fixtures" ? "All Match Fixtures" : "Competition Results"}
             </h3>
-            {matches.length === 0 ? (
+            {roundOrder.length === 0 ? (
               <div className="py-12 sm:py-16 text-center text-slate-500 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">
                 <Calendar className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2 text-slate-300" />
-                <p>No matches scheduled yet.</p>
+                <p>{activeTab === "fixtures" ? "No matches scheduled yet." : "No matches completed yet."}</p>
               </div>
             ) : (
               <div className="space-y-10">
@@ -550,7 +565,13 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                               <div className="flex justify-center mb-3 sm:mb-4">
                                 <div className={`${match.status === "Live" ? "bg-red-50 text-red-600 border border-red-200" : "bg-emerald-50 text-emerald-700"} px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5`}>
                                   <Clock className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${match.status === "Live" ? "animate-pulse" : ""}`} />
-                                  <span>{match.status === "Live" ? `Match Time: ${getLiveTime(match)}` : `Kick-off: ${time}`}</span>
+                                  <span>
+                                    {match.status === "Live" 
+                                      ? `Match Time: ${getLiveTime(match)}` 
+                                      : match.status === "Completed"
+                                        ? "Fulltime"
+                                        : `Kick-off: ${time}`}
+                                  </span>
                                 </div>
                               </div>
 
@@ -658,13 +679,16 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                 <Calendar className="h-4 w-4 sm:h-5 sm:w-5" /> 
                 Upcoming Fixtures
               </h3>
-              {matches.length === 0 ? (
+              {matches.filter(m => m.status !== "Completed").length === 0 ? (
                 <div className="py-8 text-center text-slate-500 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  No matches scheduled.
+                  No upcoming matches.
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 sm:pr-2">
-                  {matches.slice(0, 10).map(match => {
+                  {matches
+                    .filter(m => m.status !== "Completed")
+                    .slice(0, 10)
+                    .map(match => {
                     const { date, time } = formatMatchDateTime(match.matchDate);
                     return (
                       <div 
@@ -748,7 +772,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                       </div>
                     );
                   })}
-                  {matches.length > 10 && (
+                  {matches.filter(m => m.status !== "Completed").length > 10 && (
                     <button 
                       onClick={() => {
                         const fixturesTab = document.querySelector('button[class*="FIXTURES"]');

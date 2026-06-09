@@ -7,6 +7,7 @@ import { LoginPage } from "./pages/LoginPage.js";
 import { ClubPortal } from "./pages/ClubPortal.js";
 import { AdminPage } from "./pages/AdminPage.js";
 import { PublicPage } from "./components/PublicPage.js";
+import { RefereePage } from "./pages/RefereePage.js";
 
 export default function App() {
   return (
@@ -21,6 +22,8 @@ export default function App() {
 
            {/* Public Tournament Hub - no login required */}
           <Route path="/livescore" element={<PublicPage />} /> 
+
+          <Route path="/referee" element={<RefereePage />} />
           
           {/* Traditional Club authentication */}
           <Route path="/login" element={<LoginPage />} />

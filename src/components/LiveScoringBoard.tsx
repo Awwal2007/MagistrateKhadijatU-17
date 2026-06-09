@@ -25,6 +25,7 @@ interface Goal {
   playerId: string;
   jerseyNumber?: number;
   timestamp?: string | Date;
+  matchTime?: number;
 }
 
 interface Card {
@@ -34,6 +35,7 @@ interface Card {
   playerId: string;
   jerseyNumber?: number;
   timestamp?: string | Date;
+  matchTime?: number;
 }
 
 export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
@@ -227,7 +229,8 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
           team,
           timestamp: new Date().toISOString(),
           timerLastStarted: isTimerRunning ? new Date().toISOString() : null,
-          timerAccumulatedTime: matchTime
+          timerAccumulatedTime: matchTime,
+          matchTime: matchTime
         })
       });
       
@@ -327,7 +330,8 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
           type: cardType,
           timestamp: new Date().toISOString(),
           timerLastStarted: isTimerRunning ? new Date().toISOString() : null,
-          timerAccumulatedTime: matchTime
+          timerAccumulatedTime: matchTime,
+          matchTime: matchTime
         })
       });
       
@@ -766,7 +770,8 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
                       <div className={`w-3 h-4 rounded-sm ${card.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} shadow-sm`}></div>
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-slate-800 text-sm">
-                          {card.playerName} {card.jerseyNumber && <span className="text-xs text-slate-500"># {card.jerseyNumber}</span>}
+                            {card.playerName} {card.jerseyNumber && <span className="text-xs text-slate-500"># {card.jerseyNumber}</span>}
+                            {card.matchTime !== undefined && <span className="ml-1 text-red-600">({Math.floor(card.matchTime / 60)}')</span>}
                         </p>
                         <p className="text-[10px] text-slate-500">{formatTime(card.timestamp)}</p>
                       </div>

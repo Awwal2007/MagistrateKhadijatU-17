@@ -76,6 +76,10 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   const [editRound, setEditRound] = useState("");
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
+  const [editReferee, setEditReferee] = useState("");
+
+  // New state for available referees
+  const [availableReferees, setAvailableReferees] = useState<string[]>([]);
   const [updating, setUpdating] = useState(false);
 
   // New Match Form
@@ -89,6 +93,20 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   const [creating, setCreating]          = useState(false);
 
   useEffect(() => { loadMatches(); }, [authToken]);
+
+  // Effect to populate availableReferees
+  useEffect(() => {
+    const uniqueReferees = new Set<string>();
+    // Add some default referee names
+    uniqueReferees.add("Referee");
+    // uniqueReferees.add("Referee Jane Smith");
+    // uniqueReferees.add("Referee Alex Green");
+
+    matches.forEach(match => {
+      if (match.refereeId) uniqueReferees.add(match.refereeId);
+    });
+    setAvailableReferees(Array.from(uniqueReferees).sort());
+  }, [matches]); // Re-run when matches data changes
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -242,6 +260,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
     setEditStage(match.stage as any);
     setEditGroup((match.group || "") as any);
     setEditRound(match.round || "");
+    setEditReferee(match.refereeId || "");
     
     const d = new Date(match.matchDate);
     setEditDate(d.toISOString().split('T')[0]);
@@ -266,6 +285,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
           stage: editStage,
           group: editGroup === "" ? null : editGroup,
           round: editRound === "" ? null : editRound,
+          refereeId: editReferee === "" ? null : editReferee,
           matchDate
         })
       });
@@ -1073,6 +1093,20 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                   onChange={(e) => setEditRound(e.target.value)}
                   className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50"
                 />
+              </div>
+              
+              <div>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Assigned Referee (Login Name)</label>
+                <select
+                  value={editReferee}
+                  onChange={(e) => setEditReferee(e.target.value)}
+                  className="w-full text-xs py-2.5 px-3.5 border border-slate-200 rounded-xl bg-slate-50/50"
+                >
+                  <option value="">— Unassigned —</option>
+                  {availableReferees.map(ref => (
+                    <option key={ref} value={ref}>{ref}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

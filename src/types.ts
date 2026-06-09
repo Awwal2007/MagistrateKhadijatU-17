@@ -55,12 +55,14 @@ export interface Match {
   awayLineup?: Lineup;
   group: "A" | "B" | "C" | null;
   matchDate: string;
+  refereeId?: string | null;
   goals?: Array<{
     playerId: string;
     playerName: string;
     jerseyNumber: number;
     team: "home" | "away";
     timestamp: string;
+    matchTime?: number;
   }>;
   cards?: Array<{
     playerId: string;
@@ -69,6 +71,7 @@ export interface Match {
     team: "home" | "away";
     type: "Yellow" | "Red";
     timestamp: string;
+    matchTime?: number;
   }>;
   timerLastStarted?: string | null;
   timerAccumulatedTime?: number;

@@ -8,6 +8,7 @@ import {
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
 import { TournamentHub } from "../components/TournamentHub.js";
+import { LiveMarquee } from "../components/LiveMarquee.js";
 import { TournamentManager } from "../components/TournamentManager.js";
 import { Modal } from "../components/Modal.js";
 import { Team, Player, Official, Match } from "../types.js";
@@ -134,7 +135,10 @@ const MatchCenter: React.FC<{
                   {match.goals?.map((g, i) => (
                     <div key={i} className={`flex items-center gap-3 p-2 rounded-xl border ${g.team === 'home' ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'}`}>
                       <Zap className={`h-3 w-3 ${g.team === 'home' ? 'text-emerald-600' : 'text-blue-600'}`} />
-                      <span className="text-xs font-bold text-slate-700">{g.playerName} <span className="opacity-50">#{g.jerseyNumber}</span></span>
+                      <span className="text-xs font-bold text-slate-700">
+                        {g.playerName} <span className="opacity-50">#{g.jerseyNumber}</span>
+                        {g.matchTime !== undefined && <span className="ml-1 text-emerald-600">({Math.floor(g.matchTime / 60)}')</span>}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -143,7 +147,15 @@ const MatchCenter: React.FC<{
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Tactical Disciplinary</h3>
                 <div className="flex flex-wrap gap-2">
                   {match.cards?.map((c, i) => (
-                    <div key={i} className={`h-6 w-4 rounded-sm border shadow-sm ${c.type === 'Red' ? 'bg-red-500 border-red-600' : 'bg-yellow-400 border-yellow-500'}`} title={`${c.playerName} (#${c.jerseyNumber})`} />
+                    <div key={i} className={`h-6 w-4 rounded-sm border shadow-sm ${c.type === 'Red' ? 'bg-red-500 border-red-600' : 'bg-yellow-400 border-yellow-500'}`} title={`${c.playerName} (#${c.jerseyNumber})`} >
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <div className={`h-6 w-4 rounded-sm border shadow-sm ${c.type === 'Red' ? 'bg-red-500 border-red-600' : 'bg-yellow-400 border-yellow-500'}`} title={`${c.playerName} (#${c.jerseyNumber})`} >
+                      {c.matchTime !== undefined && (
+                        <span className="text-[8px] font-black text-slate-500">{Math.floor(c.matchTime / 60)}'</span>
+                      )}
+                      </div>
+                    </div>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -518,6 +530,9 @@ export const AdminPage: React.FC = () => {
           </div>
         </div>
       </nav>
+
+      {/* LIVE MATCH TICKER */}
+      <LiveMarquee matches={matches} />
 
       <div className="max-w-7xl mx-auto px-4 mt-6 space-y-6 no-print">
 

@@ -1,11 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Trophy, Calendar, Users, Shield, TrendingUp, Info } from "lucide-react";
 import { TournamentHub } from "./TournamentHub";
+import { LiveMarquee } from "./LiveMarquee";
+import { Match } from "../types.js";
 import tournamentLogo from "../assets/logo.jpeg";
 
-export const PublicPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"tournament" | "fixtures">("tournament");
+export const PublicPage: React.FC = () => { 
+  const [activeTab, setActiveTab] = useState<"tournament" | "fixtures" | "results">("tournament");
+  const [matches, setMatches] = useState<Match[]>([]);
+
+  useEffect(() => {
+    const loadMatches = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches`);
+        if (res.ok) {
+          const data = await res.json();
+          setMatches(data.matches || []);
+        }
+      } catch (err) {
+        console.error("Match load error:", err);
+      }
+    };
+    loadMatches();
+    const interval = setInterval(loadMatches, 20000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f8fcf8] text-[#141414] font-sans pb-20 animate-fade-in">
@@ -33,6 +53,9 @@ export const PublicPage: React.FC = () => {
           </div>
         </div>
       </nav>
+
+      {/* LIVE MATCH TICKER */}
+      <LiveMarquee matches={matches} />
 
       {/* HERO SECTION */}
       <div className="green-mesh py-6 sm:py-12 px-4 text-center border-b border-white/10 mb-4 sm:mb-6 relative overflow-hidden">
@@ -71,7 +94,18 @@ export const PublicPage: React.FC = () => {
             }`}
           >
             <Calendar className={`h-4 w-4 ${activeTab === 'fixtures' ? 'animate-pulse' : ''}`} />
-            Match Schedule
+            Fixtures
+          </button>
+          <button
+            onClick={() => setActiveTab("results")}
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 sm:gap-2.5 px-3 sm:px-8 py-3 sm:py-4 rounded-[2rem] text-[9px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all duration-300 border-2 ${
+              activeTab === "results"
+                ? "bg-[#0a3d0a] text-[#FFD700] border-[#0a3d0a] shadow-xl -translate-y-1"
+                : "bg-white text-slate-400 border-slate-100 hover:border-emerald-200 hover:text-emerald-700"
+            }`}
+          >
+            <TrendingUp className={`h-4 w-4 ${activeTab === 'results' ? 'animate-pulse' : ''}`} />
+            Results
           </button>
         </div>
 
