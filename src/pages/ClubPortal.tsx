@@ -141,20 +141,39 @@ const MatchCenter: React.FC<{
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Goal Timeline</h3>
                 <div className="space-y-2">
                   {(match.goals || []).length === 0 && <p className="text-xs text-slate-300 italic">No goals recorded yet</p>}
-                  {match.goals?.map((g, i) => (
+                  {match.goals?.map((g, i) => {
+                    const player = matchPlayers.find(p => p._id === g.playerId);
+                    const photo = player?.photoUrl || player?.photo;
+                    return (
                     <div key={i} className={`flex items-center gap-3 p-2 rounded-xl border ${g.team === 'home' ? 'bg-emerald-50 border-emerald-100' : 'bg-blue-50 border-blue-100'}`}>
-                      <Zap className={`h-3 w-3 ${g.team === 'home' ? 'text-emerald-600' : 'text-blue-600'}`} />
+                      {photo ? (
+                        <img src={photo} alt={g.playerName} className="w-6 h-6 rounded-full border border-white object-cover shadow-sm" />
+                      ) : (
+                        <Zap className={`h-3 w-3 ${g.team === 'home' ? 'text-emerald-600' : 'text-blue-600'}`} />
+                      )}
                       <span className="text-xs font-bold text-slate-700">{g.playerName} <span className="opacity-50">#{g.jerseyNumber}</span></span>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               <div>
                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Tactical Disciplinary</h3>
                 <div className="flex flex-wrap gap-2">
-                  {match.cards?.map((c, i) => (
-                    <div key={i} className={`h-6 w-4 rounded-sm border shadow-sm ${c.type === 'Red' ? 'bg-red-500 border-red-600' : 'bg-yellow-400 border-yellow-500'}`} title={`${c.playerName} (#${c.jerseyNumber})`} />
-                  ))}
+                  {match.cards?.map((c, i) => {
+                    const player = matchPlayers.find(p => p._id === c.playerId);
+                    const photo = player?.photoUrl || player?.photo;
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-1 group relative">
+                        {photo ? (
+                          <img src={photo} alt={c.playerName} className="w-8 h-8 rounded-full border border-white object-cover shadow-sm" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-slate-200 border border-white" />
+                        )}
+                        <div className={`h-4 w-2.5 rounded-sm border shadow-sm absolute -bottom-1 -right-1 ${c.type === 'Red' ? 'bg-red-500 border-red-600' : 'bg-yellow-400 border-yellow-500'}`} title={`${c.playerName} (#${c.jerseyNumber})`} />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -488,6 +507,11 @@ export const ClubPortal: React.FC = () => {
         body: JSON.stringify(player)
       });
 
+      if (response.status === 401) {
+        logout();
+        return;
+      }
+
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || "Failed to commit player database registration.");
@@ -515,6 +539,11 @@ export const ClubPortal: React.FC = () => {
         },
         body: JSON.stringify(official)
       });
+
+      if (response.status === 401) {
+        logout();
+        return;
+      }
 
       if (!response.ok) {
         const data = await response.json();
@@ -557,6 +586,10 @@ export const ClubPortal: React.FC = () => {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({ formation, starting11, bench })
       });
+      if (res.status === 401) {
+        logout();
+        return;
+      }
       if (!res.ok) throw new Error("Failed to save lineup");
       await loadMatches();
       setSelectedMatchForLineup(null);

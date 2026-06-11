@@ -133,6 +133,10 @@ export const RefereePage: React.FC = () => {
             timestamp: new Date().toISOString()
           })
         });
+        if (res.status === 401) {
+          handleLogout();
+          return;
+        }
         if (!res.ok) {
           const errorData = await res.json();
           throw new Error(`Failed to save card for ${card.playerName}: ${errorData.message || "Unknown error"}`);
@@ -351,15 +355,26 @@ export const RefereePage: React.FC = () => {
                 <h4 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em] mb-4">Disciplinary Log (This Match)</h4>
                 <div className="flex flex-wrap gap-3">
                   {(selectedMatch.cards || []).length === 0 && <p className="text-xs text-slate-300 italic">No cards issued yet</p>}
-                  {selectedMatch.cards?.map((c, i) => (
+                  {selectedMatch.cards?.map((c, i) => {
+                    const player = [...rosters.home, ...rosters.away].find(p => p._id === c.playerId);
+                    const photo = player?.photoUrl || player?.photo;
+                    return (
                     <div key={i} className={`flex items-center gap-3 p-2 bg-white rounded-xl border border-slate-200 pr-4`}>
-                      <div className={`w-3 h-5 rounded-xs ${c.type === 'Red' ? 'bg-red-500' : 'bg-yellow-400'}`} />
+                      <div className="relative">
+                        {photo ? (
+                          <img src={photo} alt={c.playerName} className="w-8 h-8 rounded-full border border-white object-cover" />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-slate-200 border border-white" />
+                        )}
+                        <div className={`w-2.5 h-4 rounded-xs border shadow-sm absolute -bottom-1 -right-1 ${c.type === 'Red' ? 'bg-red-500' : 'bg-yellow-400'}`} />
+                      </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-black text-slate-700 truncate">{c.playerName}</p>
                         <p className="text-[8px] font-bold text-slate-400 uppercase">{c.team} Team</p>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

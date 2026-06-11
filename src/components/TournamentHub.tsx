@@ -362,10 +362,16 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                           .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                           .map((event, idx) => {
                             const isGoal = 'team' in event && !('type' in event);
+                            const player = rosters[event.team as 'home' | 'away']?.find(p => p._id === event.playerId);
+                            const photo = player?.photoUrl || player?.photo;
                             return (
                               <div key={idx} className="flex items-start gap-4 relative z-10">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm ${isGoal ? 'bg-emerald-500 text-white' : (event as any).type === 'Red' ? 'bg-red-500 text-white' : 'bg-yellow-400 text-white'}`}>
-                                  {isGoal ? <Zap className="h-4 w-4 fill-current" /> : <AlertTriangle className="h-4 w-4 fill-current" />}
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm overflow-hidden ${isGoal ? 'bg-emerald-500 text-white' : (event as any).type === 'Red' ? 'bg-red-500 text-white' : 'bg-yellow-400 text-white'}`}>
+                                  {photo ? (
+                                    <img src={photo} alt={event.playerName} className="w-full h-full object-cover" />
+                                  ) : (
+                                    isGoal ? <Zap className="h-4 w-4 fill-current" /> : <AlertTriangle className="h-4 w-4 fill-current" />
+                                  )}
                                 </div>
                                 <div className="pt-1">
                                   <p className="text-[10px] font-black text-slate-400 uppercase">{formatEventTime(event.timestamp)}</p>
@@ -816,7 +822,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                         {i + 1}
                       </span>
                       <img 
-                        src={s.playerPhoto || s.teamLogo} 
+                        src={s.playerPhoto || (s as any).photo || (s as any).photoUrl || s.teamLogo} 
                         className="w-8 h-8 rounded-full border bg-white object-cover" 
                         alt={s.name}
                         onError={(e) => {
@@ -870,7 +876,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                         <td className="py-4 pl-2">
                           <div className="flex items-center gap-3">
                             <img 
-                              src={d.playerPhoto || d.teamLogo} 
+                              src={d.playerPhoto || (d as any).photo || (d as any).photoUrl || d.teamLogo} 
                               className="w-7 h-7 rounded-full border bg-white object-cover" 
                               alt={d.playerName}
                               onError={(e) => {

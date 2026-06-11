@@ -159,6 +159,10 @@ export const RegistrationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           Authorization: `Bearer ${authToken}`
         }
       });
+      if (response.status === 401) {
+        logout();
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setRosterPlayers(data.players || []);
