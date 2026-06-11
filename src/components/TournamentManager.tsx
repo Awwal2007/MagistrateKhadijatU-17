@@ -594,27 +594,34 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
 
                           {/* Right: actions */}
                           <div className="flex items-center gap-2 self-end sm:self-center">
-                            <button
-                              onClick={() => startEditingMatch(match)}
-                              title="Edit Fixture Teams/Date"
-                              className="p-2 rounded-xl border transition text-xs font-bold text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => onViewMatch?.(match)}
-                              title="View Tactical Pitch"
-                              className="p-2 rounded-xl border transition text-xs font-bold text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => handleSelectLiveMatch(match)}
-                              title="Start Live Scoring"
-                              className="p-2 rounded-xl border transition text-xs font-bold text-orange-600 bg-orange-50 border-orange-200 hover:bg-orange-100"
-                            >
-                              <Zap className="h-4 w-4" />
-                            </button>
+                            {!isCompleted && (
+                              <>
+                                <button
+                                  onClick={() => startEditingMatch(match)}
+                                  title="Edit Fixture Teams/Date"
+                                  className="p-2 rounded-xl border transition text-xs font-bold text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleSelectLiveMatch(match)}
+                                  title="Start Live Scoring"
+                                  className="p-2 rounded-xl border transition text-xs font-bold text-orange-600 bg-orange-50 border-orange-200 hover:bg-orange-100"
+                                >
+                                  <Zap className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
+                            {/* The "View Tactical Pitch" button can remain visible for completed matches */}
+                            {onViewMatch && (
+                              <button
+                                onClick={() => onViewMatch(match)}
+                                title="View Tactical Pitch"
+                                className="p-2 rounded-xl border transition text-xs font-bold text-amber-600 bg-amber-50 border-amber-200 hover:bg-amber-100"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </button>
+                            )}
                             <button
                               onClick={() => handleStatusToggle(match)}
                               title={isCompleted ? "Mark as Scheduled" : "Mark as Completed"}

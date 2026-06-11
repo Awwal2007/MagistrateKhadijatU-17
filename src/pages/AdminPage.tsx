@@ -673,7 +673,8 @@ export const AdminPage: React.FC = () => {
                 <div className="flex gap-2 no-print overflow-x-auto pb-1 scrollbar-thin">
                   {[
                     { id: "overview", label: "Standings & Stats" },
-                    { id: "fixtures", label: "Match Fixtures" },
+                    { id: "fixtures", label: "Upcoming Fixtures" },
+                    { id: "results", label: "Completed Matches" },
                     { id: "tournament", label: "Tournament Manager" },
                   ].map(tab => (
                     <button
@@ -714,8 +715,9 @@ export const AdminPage: React.FC = () => {
                   </div>
                 )}
 
-                {(activeTab === "overview" || activeTab === "players") && <TournamentHub authToken={authToken || ""} activeTab="tournament" />}
+                {activeTab === "overview" && <TournamentHub authToken={authToken || ""} activeTab="tournament" />}
                 {activeTab === "fixtures" && <TournamentHub authToken={authToken || ""} activeTab="fixtures" />}
+                {activeTab === "results" && <TournamentHub authToken={authToken || ""} activeTab="results" />}
                 {activeTab === "tournament" && (
                   <TournamentManager 
                     teams={fullTeamsList} 

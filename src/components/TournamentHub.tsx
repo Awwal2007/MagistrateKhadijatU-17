@@ -102,9 +102,10 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   const [rosters, setRosters] = useState<{ home: Player[], away: Player[] }>({ home: [], away: [] });
   const [loadingRosters, setLoadingRosters] = useState(false);
   const [stats, setStats] = useState<{
-    topScorers: Array<{ name: string, team: string, teamLogo: string, goals: number }>,
+    topScorers: Array<{ name: string, team: string, teamLogo: string, playerPhoto?: string, goals: number }>,
     disciplinary: Array<{
       playerName: string,
+      playerPhoto?: string, 
       teamName: string,
       teamLogo: string,
       type: "Yellow" | "Red",
@@ -814,7 +815,14 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                       <span className={`w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-black ${i < 3 ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-500'}`}>
                         {i + 1}
                       </span>
-                      <img src={s.teamLogo} className="w-8 h-8 rounded-full border bg-white object-cover" />
+                      <img 
+                        src={s.playerPhoto || s.teamLogo} 
+                        className="w-8 h-8 rounded-full border bg-white object-cover" 
+                        alt={s.name}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = s.teamLogo;
+                        }}
+                      />
                       <div>
                         <p className="text-xs font-black text-slate-800 uppercase leading-tight">{s.name}</p>
                         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{s.team}</p>
@@ -861,7 +869,14 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                       <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
                         <td className="py-4 pl-2">
                           <div className="flex items-center gap-3">
-                            <img src={d.teamLogo} className="w-7 h-7 rounded-full border bg-white object-cover" />
+                            <img 
+                              src={d.playerPhoto || d.teamLogo} 
+                              className="w-7 h-7 rounded-full border bg-white object-cover" 
+                              alt={d.playerName}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = d.teamLogo;
+                              }}
+                            />
                             <div>
                               <p className="text-xs font-bold text-slate-800 uppercase">{d.playerName}</p>
                               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{d.teamName}</p>
