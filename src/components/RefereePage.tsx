@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { 
   Shield, Key, LogOut, RefreshCw, AlertCircle, 
-  Calendar, Trophy, AlertTriangle, UserCheck, CheckCircle, 
-  X
+  Calendar, Trophy, Zap, AlertTriangle, UserCheck, CheckCircle 
 } from "lucide-react";
-import { SoccerBall } from "../components/SoccerBall.js";
 import { Match, Player } from "../types.js";
 import { TournamentHub } from "../components/TournamentHub.js";
 import tournamentLogo from "../assets/logo.jpeg";
@@ -28,17 +26,28 @@ export const RefereePage: React.FC = () => {
   const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
   const [rosters, setRosters] = useState<{ home: Player[], away: Player[] }>({ home: [], away: [] });
   const [recording, setRecording] = useState(false);
-  const [stagedCards, setStagedCards] = useState<Array<{
-    playerId: string;
-    playerName: string;
-    jerseyNumber: number;
-    team: "home" | "away";
-    type: "Yellow" | "Red";
-  }>>([]);
 
   useEffect(() => {
     if (refereeToken) loadRefereeData();
   }, [refereeToken]);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (selectedMatch?.status === "Live") {
+      const accumulated = selectedMatch.timerAccumulatedTime || 0;
+      const lastStartedTime = selectedMatch.timerLastStarted ? new Date(selectedMatch.timerLastStarted).getTime() : 0;
+      const diff = (lastStartedTime > 0) ? Math.floor((Date.now() - lastStartedTime) / 1000) : 0;
+      setCurrentMatchTime(Math.max(0, accumulated + diff));
+    } else if (selectedMatch) {
+      setCurrentMatchTime(selectedMatch.timerAccumulatedTime || 0);
+    } else {
+      setCurrentMatchTime(0);
+    }
+  }, [selectedMatch, now]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,79 +92,38 @@ export const RefereePage: React.FC = () => {
 
   const openMatchControl = async (match: Match) => {
     setSelectedMatch(match);
-    setStagedCards([]); // Clear any staged cards when opening a new match
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches/${match._id}/rosters`);
       const data = await res.json();
       setRosters({ home: data.homePlayers || [], away: data.awayPlayers || [] });
     } catch (e) { console.error(e); }
   };
-  
-  const stageCard = (player: Player, team: 'home' | 'away', type: 'Yellow' | 'Red') => {
-    // Check if this exact card (player, type) is already staged
-    const isAlreadyStaged = stagedCards.some(
-      (card) => card.playerId === player._id && card.type === type
-    );
 
-    if (isAlreadyStaged) {
-      // Optionally, show a message or just ignore
-      console.log(`Card (${type}) for ${player.name} is already staged.`);
-      return;
-    }
-
-    setStagedCards((prev) => [
-      ...prev,
-      { playerId: player._id, playerName: player.name, jerseyNumber: player.jerseyNumber, team, type },
-    ]);
-  };
-
-  const removeStagedCard = (index: number) => {
-    setStagedCards((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSaveStagedCards = async () => {
+  const issueCard = async (player: Player, team: 'home' | 'away', type: 'Yellow' | 'Red') => {
     if (!selectedMatch || recording) return;
     setRecording(true);
-    setError(null); // Clear previous errors
     try {
-      const savePromises = stagedCards.map(async (card) => {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${selectedMatch._id}/record-card`, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json", 
-            Authorization: `Bearer ${refereeToken}` 
-          },
-          body: JSON.stringify({
-            playerId: card.playerId,
-            playerName: card.playerName,
-            jerseyNumber: card.jerseyNumber,
-            team: card.team,
-            type: card.type,
-            timestamp: new Date().toISOString()
-          })
-        });
-        if (res.status === 401) {
-          handleLogout();
-          return;
-        }
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(`Failed to save card for ${card.playerName}: ${errorData.message || "Unknown error"}`);
-        }
+      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${selectedMatch._id}/record-card`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json", 
+          Authorization: `Bearer ${refereeToken}` 
+        },
+        body: JSON.stringify({
+          playerId: player._id,
+          playerName: player.name,
+          jerseyNumber: player.jerseyNumber,
+          team,
+          type,
+          timestamp: new Date().toISOString()
+        })
       });
-
-      await Promise.all(savePromises); // Wait for all cards to be saved
-      setStagedCards([]); // Clear staged cards after all are saved
-      loadRefereeData(); // Reload match data to show new cards
-      const updatedMatchRes = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/matches/${selectedMatch._id}`);
-      if (updatedMatchRes.ok) {
-        const updatedMatchData = await updatedMatchRes.json();
-        setSelectedMatch(updatedMatchData.match);
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedMatch(data.match);
+        loadRefereeData();
       }
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message);
-    }
+    } catch (err) { console.error(err); }
     finally { setRecording(false); }
   };
 
@@ -228,7 +196,7 @@ export const RefereePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {assignedMatches.length === 0 ? (
               <div className="col-span-full bg-white p-12 rounded-[2rem] text-center border border-dashed border-slate-300">
-                <SoccerBall className="h-10 w-10 mx-auto text-slate-200 mb-2" />
+                <Zap className="h-10 w-10 mx-auto text-slate-200 mb-2" />
                 <p className="text-sm font-bold text-slate-400 uppercase tracking-widest">No matches currently assigned to you</p>
               </div>
             ) : assignedMatches.map(match => (
@@ -263,6 +231,15 @@ export const RefereePage: React.FC = () => {
                 </div>
               </div>
 
+              {selectedMatch.status === "Live" && (
+                <div className="px-8 pb-4 flex justify-center">
+                  <div className="bg-slate-900 text-[#FFD700] px-4 py-2 rounded-2xl font-mono text-xl border-2 border-emerald-800 shadow-inner flex items-center gap-2">
+                    <Clock className="h-4 w-4 animate-pulse" />
+                    <span>{Math.floor(currentMatchTime / 60)}:{String(currentMatchTime % 60).padStart(2, '0')}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-10">
                 {/* Home Team Card Control */}
                 <div className="space-y-4">
@@ -276,11 +253,11 @@ export const RefereePage: React.FC = () => {
                         </div>
                         <div className="flex gap-1.5">
                           <button 
-                            onClick={() => stageCard(p, 'home', 'Yellow')}
+                            onClick={() => issueCard(p, 'home', 'Yellow')}
                             className="w-7 h-9 bg-yellow-400 rounded-sm border-2 border-white shadow-sm hover:scale-110 transition"
                           />
                           <button 
-                            onClick={() => stageCard(p, 'home', 'Red')}
+                            onClick={() => issueCard(p, 'home', 'Red')}
                             className="w-7 h-9 bg-red-500 rounded-sm border-2 border-white shadow-sm hover:scale-110 transition"
                           />
                         </div>
@@ -301,11 +278,11 @@ export const RefereePage: React.FC = () => {
                         </div>
                         <div className="flex gap-1.5">
                           <button 
-                            onClick={() => stageCard(p, 'away', 'Yellow')}
+                            onClick={() => issueCard(p, 'away', 'Yellow')}
                             className="w-7 h-9 bg-yellow-400 rounded-sm border-2 border-white shadow-sm hover:scale-110 transition"
                           />
                           <button 
-                            onClick={() => stageCard(p, 'away', 'Red')}
+                            onClick={() => issueCard(p, 'away', 'Red')}
                             className="w-7 h-9 bg-red-500 rounded-sm border-2 border-white shadow-sm hover:scale-110 transition"
                           />
                         </div>
@@ -314,68 +291,24 @@ export const RefereePage: React.FC = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Staged Cards Section */}
-              {stagedCards.length > 0 && (
-                <div className="bg-slate-50 border-t p-8">
-                  <h4 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em] mb-4">Staged Cards (Pending Save)</h4>
-                  {error && <div className="p-3 bg-red-950/40 text-red-400 text-xs rounded-xl flex gap-2 mb-4"><AlertCircle className="h-4 w-4" /> {error}</div>}
-                  <div className="flex flex-wrap gap-3">
-                    {stagedCards.map((card, index) => (
-                      <div key={index} className={`flex items-center gap-3 p-2 bg-white rounded-xl border border-slate-200 pr-4`}>
-                        <div className={`w-3 h-5 rounded-xs ${card.type === 'Red' ? 'bg-red-500' : 'bg-yellow-400'}`} />
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-black text-slate-700 truncate">{card.playerName}</p>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase">{card.team} Team</p>
-                        </div>
-                        <button onClick={() => removeStagedCard(index)} className="p-1 text-red-400 hover:text-red-600 rounded-full"><X className="h-3 w-3" /></button>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-3 mt-6">
-                    <button
-                      onClick={() => setStagedCards([])}
-                      className="flex-1 py-3 text-xs font-bold uppercase tracking-widest text-slate-500 hover:bg-slate-200 rounded-xl transition"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSaveStagedCards}
-                      disabled={recording}
-                      className="flex-[2] py-3 bg-[#0a3d0a] text-[#FFD700] rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg hover:brightness-110 transition disabled:opacity-60"
-                    >
-                      {recording ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                      {recording ? "Saving Cards..." : "Save Cards"}
-                    </button>
-                  </div>
-                </div>
-              )}
               
               {/* Match Card History */}
               <div className="bg-slate-50 border-t p-8">
                 <h4 className="font-black text-[10px] text-slate-400 uppercase tracking-[0.2em] mb-4">Disciplinary Log (This Match)</h4>
                 <div className="flex flex-wrap gap-3">
                   {(selectedMatch.cards || []).length === 0 && <p className="text-xs text-slate-300 italic">No cards issued yet</p>}
-                  {selectedMatch.cards?.map((c, i) => {
-                    const player = [...rosters.home, ...rosters.away].find(p => p._id === c.playerId);
-                    const photo = player?.photoUrl || player?.photo;
-                    return (
+                  {selectedMatch.cards?.map((c, i) => (
                     <div key={i} className={`flex items-center gap-3 p-2 bg-white rounded-xl border border-slate-200 pr-4`}>
-                      <div className="relative">
-                        {photo ? (
-                          <img src={photo} alt={c.playerName} className="w-8 h-8 rounded-full border border-white object-cover" />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-slate-200 border border-white" />
-                        )}
-                        <div className={`w-2.5 h-4 rounded-xs border shadow-sm absolute -bottom-1 -right-1 ${c.type === 'Red' ? 'bg-red-500' : 'bg-yellow-400'}`} />
-                      </div>
+                      <div className={`w-3 h-5 rounded-xs ${c.type === 'Red' ? 'bg-red-500' : 'bg-yellow-400'}`} />
                       <div className="min-w-0">
                         <p className="text-[10px] font-black text-slate-700 truncate">{c.playerName}</p>
-                        <p className="text-[8px] font-bold text-slate-400 uppercase">{c.team} Team</p>
+                          <p className="text-[8px] font-bold text-slate-400 uppercase">
+                            {c.team} Team
+                            {c.matchTime !== undefined && <span className="ml-1 text-emerald-600">({Math.floor(c.matchTime / 60)}')</span>}
+                          </p>
                       </div>
                     </div>
-                    );
-                  })}
+                  ))}
                 </div>
               </div>
             </div>

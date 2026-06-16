@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Match, GroupStanding, Player } from "../types.js";
 import { Modal } from "./Modal.js";
-import { Trophy, Calendar, MapPin, Clock, Layers, Users, ShieldAlert, Zap, AlertTriangle, ArrowLeft, RefreshCw, Eye, Pencil } from "lucide-react";
+import { Trophy, Calendar, MapPin, Clock, Layers, AlertCircle, ShieldAlert, AlertTriangle, ArrowLeft, RefreshCw, Zap, Pencil } from "lucide-react";
+import { SoccerBall } from "./SoccerBall.js";
 
 const FORMATIONS: Record<string, { def: number; mid: number; fwd: number }> = {
   "4-4-2": { def: 4, mid: 4, fwd: 2 },
@@ -42,7 +43,7 @@ const TacticalPitch: React.FC<{
             </div>
             <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
               {stats.goals > 0 && Array(stats.goals).fill(0).map((_, gi) => (
-                <Zap key={gi} className="h-3 w-3 text-[#FFD700] fill-[#FFD700] drop-shadow-md" />
+                <SoccerBall key={gi} className="h-3 w-3 text-[#FFD700] fill-[#FFD700] drop-shadow-md" />
               ))}
               {stats.cards.map((c: any, ci: number) => (
                 <div key={ci} className={`w-1.5 h-2 rounded-xs ${c.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} border-[0.5px] border-white/20`} />
@@ -366,11 +367,18 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                             const photo = player?.photoUrl || player?.photo;
                             return (
                               <div key={idx} className="flex items-start gap-4 relative z-10">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm overflow-hidden ${isGoal ? 'bg-emerald-500 text-white' : (event as any).type === 'Red' ? 'bg-red-500 text-white' : 'bg-yellow-400 text-white'}`}>
-                                  {photo ? (
-                                    <img src={photo} alt={event.playerName} className="w-full h-full object-cover" />
-                                  ) : (
-                                    isGoal ? <Zap className="h-4 w-4 fill-current" /> : <AlertTriangle className="h-4 w-4 fill-current" />
+                                <div className="relative shrink-0">
+                                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-4 border-white shadow-sm overflow-hidden ${isGoal ? 'bg-emerald-500 text-white' : (event as any).type === 'Red' ? 'bg-red-500 text-white' : 'bg-yellow-400 text-white'}`}>
+                                    {photo ? (
+                                      <img src={photo} alt={event.playerName} className="w-full h-full object-cover" />
+                                    ) : (
+                                      isGoal ? <SoccerBall className="h-4 w-4 fill-current" /> : <AlertTriangle className="h-4 w-4 fill-current" />
+                                    )}
+                                  </div>
+                                  {photo && (
+                                    <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center border-2 border-white shadow-sm ${isGoal ? 'bg-emerald-500 text-white' : (event as any).type === 'Red' ? 'bg-red-500 text-white' : 'bg-yellow-400 text-white'}`}>
+                                      {isGoal ? <SoccerBall className="h-2 w-2 fill-current" /> : <AlertTriangle className="h-2 w-2 fill-current" />}
+                                    </div>
                                   )}
                                 </div>
                                 <div className="pt-1">
@@ -642,6 +650,172 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                           </div>
                         );
                       })}
+                      {activeTab === "fixtures" && grouped[roundName].some(m => m.stage === "Quarter Final") && (
+                        <div className="mt-6 pt-4 border-t-2 border-dashed border-purple-200 space-y-4">
+                          <div className="flex items-center gap-2 text-xs font-bold text-purple-700 uppercase tracking-wider mb-2">
+                            <AlertCircle className="h-4 w-4" />
+                            Projected Semi-Finals
+                          </div>
+                          
+                          {/* Projected Match 1 */}
+                          <div className="relative group opacity-90 hover:opacity-100 transition-opacity">
+                            <div className="border border-purple-200 rounded-xl p-3 sm:p-4 bg-purple-50/50 shadow-sm">
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] sm:text-[10px] font-bold text-purple-500 uppercase mb-2 sm:mb-3">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                                    Semi Final
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3 w-3" />
+                                  <span>TBD</span>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-center mb-3 sm:mb-4">
+                                <div className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 border border-slate-200">
+                                  <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                  <span>Kick-off: TBD</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 sm:gap-4">
+                                <div className="flex-1 text-center">
+                                  <div className="flex justify-center mb-1 sm:mb-2">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                      <span className="text-slate-300 font-black text-lg">?</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner 1</span>
+                                </div>
+
+                                <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
+                                  <div className="bg-slate-200 text-slate-500 text-[10px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold inline-block">
+                                    VS
+                                  </div>
+                                </div>
+
+                                <div className="flex-1 text-center">
+                                  <div className="flex justify-center mb-1 sm:mb-2">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                      <span className="text-slate-300 font-black text-lg">?</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner 3</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Projected Match 2 */}
+                          <div className="relative group opacity-90 hover:opacity-100 transition-opacity">
+                            <div className="border border-purple-200 rounded-xl p-3 sm:p-4 bg-purple-50/50 shadow-sm">
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] sm:text-[10px] font-bold text-purple-500 uppercase mb-2 sm:mb-3">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                                    Semi Final
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3 w-3" />
+                                  <span>TBD</span>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-center mb-3 sm:mb-4">
+                                <div className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 border border-slate-200">
+                                  <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                  <span>Kick-off: TBD</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 sm:gap-4">
+                                <div className="flex-1 text-center">
+                                  <div className="flex justify-center mb-1 sm:mb-2">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                      <span className="text-slate-300 font-black text-lg">?</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner 2</span>
+                                </div>
+
+                                <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
+                                  <div className="bg-slate-200 text-slate-500 text-[10px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold inline-block">
+                                    VS
+                                  </div>
+                                </div>
+
+                                <div className="flex-1 text-center">
+                                  <div className="flex justify-center mb-1 sm:mb-2">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                      <span className="text-slate-300 font-black text-lg">?</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner 4</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {activeTab === "fixtures" && (grouped[roundName].some(m => m.stage === "Semi Final") || (grouped[roundName].some(m => m.stage === "Quarter Final") && !matches.some(m => m.stage === "Semi Final"))) && (
+                        <div className="mt-6 pt-4 border-t-2 border-dashed border-red-200 space-y-4">
+                          <div className="flex items-center gap-2 text-xs font-bold text-red-700 uppercase tracking-wider mb-2">
+                            <AlertCircle className="h-4 w-4" />
+                            Projected Final
+                          </div>
+                          
+                          {/* Projected Final Match */}
+                          <div className="relative group opacity-90 hover:opacity-100 transition-opacity">
+                            <div className="border border-red-200 rounded-xl p-3 sm:p-4 bg-red-50/50 shadow-sm">
+                              <div className="flex flex-wrap items-center justify-between gap-2 text-[9px] sm:text-[10px] font-bold text-red-500 uppercase mb-2 sm:mb-3">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
+                                    Final
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3 w-3" />
+                                  <span>TBD</span>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-center mb-3 sm:mb-4">
+                                <div className="bg-slate-100 text-slate-500 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5 border border-slate-200">
+                                  <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                  <span>Kick-off: TBD</span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 sm:gap-4">
+                                <div className="flex-1 text-center">
+                                  <div className="flex justify-center mb-1 sm:mb-2">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                      <span className="text-slate-300 font-black text-lg">?</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner SF 1</span>
+                                </div>
+
+                                <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
+                                  <div className="bg-slate-200 text-slate-500 text-[10px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold inline-block">
+                                    VS
+                                  </div>
+                                </div>
+
+                                <div className="flex-1 text-center">
+                                  <div className="flex justify-center mb-1 sm:mb-2">
+                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                      <span className="text-slate-300 font-black text-lg">?</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner SF 2</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

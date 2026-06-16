@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { LogOut, Printer, Users, UserCheck, ShieldAlert, BadgeCheck, AlertCircle, RefreshCw, Layers, Zap, Clock, Eye, Share2 } from "lucide-react";
+import { LogOut, Printer, Users, UserCheck, ShieldAlert, BadgeCheck, AlertCircle, RefreshCw, Layers, Clock, Eye, Share2 } from "lucide-react";
+import { SoccerBall } from "../components/SoccerBall.js";
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
 import { PlayerForm } from "../components/PlayerForm.js";
@@ -48,7 +49,7 @@ const LineupPitchDisplay: React.FC<{
             </div>
             <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
               {stats.goals > 0 && Array(stats.goals).fill(0).map((_, gi) => (
-                <Zap key={gi} className="h-3 w-3 text-[#FFD700] fill-[#FFD700] drop-shadow-md" />
+                <SoccerBall key={gi} className="h-3 w-3 text-[#FFD700] fill-[#FFD700] drop-shadow-md" />
               ))}
               {stats.cards.map((c: any, ci: number) => (
                 <div key={ci} className={`w-1.5 h-2 rounded-xs ${c.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} border-[0.5px] border-white/20`} />
@@ -149,7 +150,7 @@ const MatchCenter: React.FC<{
                       {photo ? (
                         <img src={photo} alt={g.playerName} className="w-6 h-6 rounded-full border border-white object-cover shadow-sm" />
                       ) : (
-                        <Zap className={`h-3 w-3 ${g.team === 'home' ? 'text-emerald-600' : 'text-blue-600'}`} />
+                        <SoccerBall className={`h-3 w-3 ${g.team === 'home' ? 'text-emerald-600' : 'text-blue-600'}`} />
                       )}
                       <span className="text-xs font-bold text-slate-700">{g.playerName} <span className="opacity-50">#{g.jerseyNumber}</span></span>
                     </div>
@@ -296,7 +297,7 @@ const LineupEditor: React.FC<{
                   #{player.jerseyNumber}
                 </span>
               ) : (
-                <Zap className={`h-4 w-4 ${isActive ? 'text-white' : 'text-white/20'}`} />
+                <SoccerBall className={`h-4 w-4 ${isActive ? 'text-white' : 'text-white/20'}`} />
               )
             )}
           </div>
@@ -428,7 +429,7 @@ export const ClubPortal: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [errorOnLoad, setErrorOnLoad] = useState<string | null>(null);
   const [matches, setMatches] = useState<Match[]>([]);
-  const [activeTab, setActiveTab] = useState<"roster" | "tournament" | "fixtures" | "lineup">("roster");
+  const [activeTab, setActiveTab] = useState<"roster" | "tournament" | "fixtures" | "lineup" | "results">("roster");
   const fixturesRef = useRef<HTMLDivElement>(null);
   const [viewingMatch, setViewingMatch] = useState<Match | null>(null);
 
@@ -561,11 +562,11 @@ export const ClubPortal: React.FC = () => {
     window.print();
   };
 
-  const handleTabChange = (tab: "roster" | "tournament" | "fixtures" | "lineup") => {
+  const handleTabChange = (tab: "roster" | "tournament" | "fixtures" | "lineup" | "results") => {
     setActiveTab(tab);
     
     // Scroll to fixtures section on mobile when fixtures tab is clicked
-    if (tab === "fixtures" && fixturesRef.current) {
+    if ((tab === "fixtures" || tab === "results") && fixturesRef.current) {
       setTimeout(() => {
         fixturesRef.current?.scrollIntoView({ 
           behavior: 'smooth', 
@@ -699,6 +700,16 @@ export const ClubPortal: React.FC = () => {
             📅 FIXTURES
           </button>
           <button
+            onClick={() => handleTabChange("results")}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
+              activeTab === "results"
+                ? 'bg-[#0a3d0a] text-[#FFD700] shadow-md'
+                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+            }`}
+          >
+            ✅ RESULTS
+          </button>
+          <button
             onClick={() => handleTabChange("lineup")}
             className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition-all whitespace-nowrap ${
               activeTab === "lineup"
@@ -722,37 +733,73 @@ export const ClubPortal: React.FC = () => {
                 onCancel={() => setSelectedMatchForLineup(null)}
               />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {matches.filter(m => (m.homeTeamId === currentTeam?.id || m.awayTeamId === currentTeam?.id) && m.status !== "Completed").map(match => (
-                  <div key={match._id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="text-center bg-slate-50 p-2 rounded-xl border w-24">
-                        <p className="text-[10px] font-bold text-slate-400">VS</p>
-                        <p className="text-[10px] font-black text-slate-700 truncate">{match.homeTeamId === currentTeam?.id ? match.awayTeamName : match.homeTeamName}</p>
+              <div className="space-y-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {matches.filter(m => (m.homeTeamId === currentTeam?.id || m.awayTeamId === currentTeam?.id) && m.status !== "Completed").map(match => (
+                    <div key={match._id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="text-center bg-slate-50 p-2 rounded-xl border w-24">
+                          <p className="text-[10px] font-bold text-slate-400">VS</p>
+                          <p className="text-[10px] font-black text-slate-700 truncate">{match.homeTeamId === currentTeam?.id ? match.awayTeamName : match.homeTeamName}</p>
+                        </div>
+                        <div>
+                          <button 
+                            onClick={() => setViewingMatch(match)}
+                            className="flex items-center gap-1 text-[10px] font-black text-amber-600 uppercase hover:underline mb-1"
+                          >
+                            <Eye className="h-3 w-3" /> Match Center
+                          </button>
+                          <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">{match.stage}</p>
+                          <p className="text-xs font-bold text-slate-400">{new Date(match.matchDate).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <div>
-                        <button 
-                          onClick={() => setViewingMatch(match)}
-                          className="flex items-center gap-1 text-[10px] font-black text-amber-600 uppercase hover:underline mb-1"
-                        >
-                          <Eye className="h-3 w-3" /> Match Center
-                        </button>
-                        <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">{match.stage}</p>
-                        <p className="text-xs font-bold text-slate-400">{new Date(match.matchDate).toLocaleDateString()}</p>
-                      </div>
+                      <button onClick={() => setSelectedMatchForLineup(match)} className="px-4 py-2 bg-emerald-700 text-[#FFD700] rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm">
+                        { (match.homeTeamId === currentTeam?.id ? match.homeLineup : match.awayLineup)?.starting11?.length ? "Edit Lineup" : "Set Lineup" }
+                      </button>
                     </div>
-                    <button onClick={() => setSelectedMatchForLineup(match)} className="px-4 py-2 bg-emerald-700 text-[#FFD700] rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-sm">
-                      { (match.homeTeamId === currentTeam?.id ? match.homeLineup : match.awayLineup)?.starting11?.length ? "Edit Lineup" : "Set Lineup" }
-                    </button>
+                  ))}
+                </div>
+
+                {matches.some(m => (m.homeTeamId === currentTeam?.id || m.awayTeamId === currentTeam?.id) && m.status === "Completed") && (
+                  <div className="space-y-4">
+                    <div className="border-b border-slate-200 pb-2">
+                      <h3 className="font-bebas text-2xl text-slate-800 tracking-wide uppercase">Match History</h3>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Your past competition results</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {matches.filter(m => (m.homeTeamId === currentTeam?.id || m.awayTeamId === currentTeam?.id) && m.status === "Completed").map(match => (
+                        <div key={match._id} className="bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between opacity-90 hover:opacity-100 transition-opacity">
+                          <div className="flex items-center gap-4">
+                            <div className="text-center bg-white p-2 rounded-xl border w-24">
+                              <p className="text-[10px] font-bold text-slate-400">VS</p>
+                              <p className="text-[10px] font-black text-slate-700 truncate">{match.homeTeamId === currentTeam?.id ? match.awayTeamName : match.homeTeamName}</p>
+                            </div>
+                            <div>
+                              <button 
+                                onClick={() => setViewingMatch(match)}
+                                className="flex items-center gap-1 text-[10px] font-black text-amber-600 uppercase hover:underline mb-1"
+                              >
+                                <Eye className="h-3 w-3" /> Match Center
+                              </button>
+                              <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest">{match.stage}</p>
+                              <p className="text-xs font-bold text-slate-400">{new Date(match.matchDate).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <div className="bg-[#FFD700] text-[#0a3d0a] px-3 py-1.5 rounded-xl font-black text-lg border border-white/20 shadow-sm">
+                            {match.homeScore ?? 0} : {match.awayScore ?? 0}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
         )}
 
         {activeTab !== "roster" && activeTab !== "lineup" && authToken ? (
-          <div ref={activeTab === "fixtures" ? fixturesRef : null}>
+          <div ref={(activeTab === "fixtures" || activeTab === "results") ? fixturesRef : null}>
             <TournamentHub activeTab={activeTab} authToken={authToken} />
           </div>
         ) : activeTab === "roster" ? (

@@ -645,6 +645,147 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                       );
                     })}
                   </div>
+                  {stage === "Quarter Final" && (
+                    <div className="border-t border-purple-200 bg-purple-50/20 divide-y divide-purple-100">
+                      <div className="px-6 py-2 bg-purple-100/50 flex items-center gap-2 text-xs font-bold text-purple-800 uppercase tracking-wider">
+                        <AlertCircle className="h-4 w-4" />
+                        Projected Semi-Finals
+                      </div>
+                      
+                      {/* Projected Semi Final 1 */}
+                      <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:bg-purple-50/50">
+                        <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-700">
+                                Semi Final
+                              </span>
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-slate-50 text-slate-500 border-slate-200">
+                                <Clock className="h-2.5 w-2.5" /> TBD
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex-1 flex items-center justify-center gap-3">
+                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
+                              <span className="text-slate-400 font-bold text-lg">?</span>
+                            </div>
+                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner 1</span>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-2 opacity-50">
+                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                              <span className="text-xl font-black text-slate-300">:</span>
+                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
+                              <span className="text-slate-400 font-bold text-lg">?</span>
+                            </div>
+                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner 3</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-center sm:min-w-[120px]"></div>
+                      </div>
+
+                      {/* Projected Semi Final 2 */}
+                      <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:bg-purple-50/50">
+                        <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-700">
+                                Semi Final
+                              </span>
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-slate-50 text-slate-500 border-slate-200">
+                                <Clock className="h-2.5 w-2.5" /> TBD
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex-1 flex items-center justify-center gap-3">
+                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
+                              <span className="text-slate-400 font-bold text-lg">?</span>
+                            </div>
+                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner 2</span>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-2 opacity-50">
+                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                              <span className="text-xl font-black text-slate-300">:</span>
+                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
+                              <span className="text-slate-400 font-bold text-lg">?</span>
+                            </div>
+                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner 4</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 self-end sm:self-center sm:min-w-[120px]"></div>
+                      </div>
+                    </div>
+                  )}
+                  {(stage === "Semi Final" || (stage === "Quarter Final" && (matchesByStage["Semi Final"]?.length ?? 0) === 0)) && (
+                    <div className="border-t border-red-200 bg-red-50/20 divide-y divide-red-100">
+                      <div className="px-6 py-2 bg-red-100/50 flex items-center gap-2 text-xs font-bold text-red-800 uppercase tracking-wider">
+                        <AlertCircle className="h-4 w-4" />
+                        Projected Final
+                      </div>
+                      
+                      {/* Projected Final Match */}
+                      <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:bg-red-50/50">
+                        <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-700">
+                                Final
+                              </span>
+                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-slate-50 text-slate-500 border-slate-200">
+                                <Clock className="h-2.5 w-2.5" /> TBD
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex-1 flex items-center justify-center gap-3">
+                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
+                              <span className="text-slate-400 font-bold text-lg">?</span>
+                            </div>
+                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner SF 1</span>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-2 opacity-50">
+                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                              <span className="text-xl font-black text-slate-300">:</span>
+                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
+                              <span className="text-slate-400 font-bold text-lg">?</span>
+                            </div>
+                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner SF 2</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-end sm:self-center sm:min-w-[120px]"></div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })

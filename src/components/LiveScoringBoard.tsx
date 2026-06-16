@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { Match, Player } from "../types.js";
 import { Modal } from "./Modal.js"
 import {
-  Play, Square, Trash2, Plus, RefreshCw, TrendingUp, Zap, Trophy, Clock, AlertTriangle, Pause
+  Play, Square, Trash2, Plus, RefreshCw, TrendingUp, Trophy, Clock, AlertTriangle, Pause
 } from "lucide-react";
+import { SoccerBall } from "./SoccerBall.js";
 
 interface LiveScoringBoardProps {
   match: Match;
@@ -136,31 +137,39 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
     );
   };
 
-  const handleStartLive = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/start-live`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${authToken}` }
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to start live");
+  const handleStartLive = () => {
+    setModalConfig({
+      isOpen: true,
+      title: "Start Live Match",
+      message: `Are you sure you want to start the live match between ${match.homeTeamName} and ${match.awayTeamName}? The match timer will begin immediately.`,
+      type: "confirm",
+      onConfirm: async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}/start-live`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.message || "Failed to start live");
+          }
+          setIsLive(true);
+          setMatchTime(0);
+          setIsTimerRunning(true);
+          setGoals([]);
+          setCards([]);
+          onMatchUpdated(data.match);
+        } catch (err: any) {
+          console.error("Start live error:", err);
+          setError(err.message);
+          setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
+        } finally {
+          setLoading(false);
+        }
       }
-      setIsLive(true);
-      setMatchTime(0);
-      setIsTimerRunning(true);
-      setGoals([]);
-      setCards([]);
-      onMatchUpdated(data.match);
-    } catch (err: any) {
-      console.error("Start live error:", err);
-      setError(err.message);
-      setModalConfig({ isOpen: true, title: "Error", message: err.message, type: "error" });
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const handleEndLive = () => {
@@ -728,7 +737,7 @@ export const LiveScoringBoard: React.FC<LiveScoringBoardProps> = ({
                     }`}
                   >
                     <div className="flex items-center gap-3 flex-1">
-                      <Zap className={`h-4 w-4 ${goal.team === "home" ? "text-emerald-600" : "text-blue-600"}`} />
+                      <SoccerBall className={`h-4 w-4 ${goal.team === "home" ? "text-emerald-600" : "text-blue-600"}`} />
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-slate-800 text-sm">
                           {goal.playerName} {goal.jerseyNumber && <span className="text-xs text-slate-500"># {goal.jerseyNumber}</span>}

@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import {
   Shield, Key, AlertCircle, RefreshCw, Trash2, Printer, Search,
   ArrowLeft, LogOut, ChevronRight, Users, UserCheck, Building2,
-  Trophy, TrendingUp, Eye, Zap, Clock, Share2
+  Trophy, TrendingUp, Eye, Clock, Share2
 } from "lucide-react";
+import { SoccerBall } from "../components/SoccerBall.js";
 import { useRegistration } from "../context/RegistrationContext.js";
 import { PrintCard } from "../components/PrintCard.js";
 import { TournamentHub } from "../components/TournamentHub.js";
@@ -63,7 +64,7 @@ const LineupPitchDisplay: React.FC<{
             </div>
             <div className="absolute -top-1 -right-1 flex flex-col gap-0.5">
               {stats.goals > 0 && Array(stats.goals).fill(0).map((_, gi) => (
-                <Zap key={gi} className="h-3 w-3 text-[#FFD700] fill-[#FFD700] drop-shadow-md" />
+                <SoccerBall key={gi} className="h-3 w-3 text-[#FFD700] fill-[#FFD700] drop-shadow-md" />
               ))}
               {stats.cards.map((c: any, ci: number) => (
                 <div key={ci} className={`w-1.5 h-2 rounded-xs ${c.type === 'Yellow' ? 'bg-yellow-400' : 'bg-red-500'} border-[0.5px] border-white/20`} />
@@ -140,7 +141,7 @@ const MatchCenter: React.FC<{
                       {photo ? (
                         <img src={photo} alt={g.playerName} className="w-6 h-6 rounded-full border border-white object-cover shadow-sm" />
                       ) : (
-                        <Zap className={`h-3 w-3 ${g.team === 'home' ? 'text-emerald-600' : 'text-blue-600'}`} />
+                        <SoccerBall className={`h-3 w-3 ${g.team === 'home' ? 'text-emerald-600' : 'text-blue-600'}`} />
                       )}
                       <span className="text-xs font-bold text-slate-700">
                         {g.playerName} <span className="opacity-50">#{g.jerseyNumber}</span>

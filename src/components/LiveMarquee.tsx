@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Clock, Zap } from "lucide-react";
+import { Clock } from "lucide-react";
+import { SoccerBall } from "./SoccerBall.js";
 import { Match } from "../types.js";
 
 interface GoalNotification {
@@ -58,7 +59,7 @@ export const LiveMarquee: React.FC<{ matches: Match[] }> = ({ matches }) => {
             key={notif.id} 
             className="bg-[#FFD700] text-[#0a3d0a] px-6 py-2 rounded-full font-black text-[10px] sm:text-xs shadow-2xl flex items-center gap-2 animate-bounce border-2 border-[#0a3d0a] pointer-events-auto"
           >
-            <Zap className="h-4 w-4 fill-current" />
+            <SoccerBall className="h-4 w-4 fill-current" />
             <span className="uppercase tracking-widest">GOAL! {notif.teamName} ({notif.score})</span>
           </div>
         ))}
