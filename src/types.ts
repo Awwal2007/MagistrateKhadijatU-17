@@ -48,6 +48,8 @@ export interface Match {
   awayTeamLogo?: string;
   homeScore: number | null;
   awayScore: number | null;
+  homePenaltyScore?: number | null;
+  awayPenaltyScore?: number | null;
   status: "Scheduled" | "Live" | "Completed";
   stage: "Group Stage" | "Quarter Final" | "Semi Final" | "Final";
   round?: string;
