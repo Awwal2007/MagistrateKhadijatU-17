@@ -58,7 +58,7 @@ const TacticalPitch: React.FC<{
     }
     return <div className="flex justify-around items-center w-full z-10 min-h-[60px]">{items}</div>;
   };
-  
+
   // FIXED: Check if starting11 exists before accessing indices
   if (!lineup.starting11 || lineup.starting11.length === 0) {
     return (
@@ -67,7 +67,7 @@ const TacticalPitch: React.FC<{
       </div>
     );
   }
-  
+
   return (
     <div className="relative aspect-[3/4] w-full bg-emerald-600 rounded-3xl overflow-hidden border-4 border-white/20 shadow-2xl flex flex-col justify-between p-4 sm:p-8">
       <div className="absolute inset-0 pointer-events-none">
@@ -106,7 +106,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     topScorers: Array<{ name: string, team: string, teamLogo: string, playerPhoto?: string, goals: number }>,
     disciplinary: Array<{
       playerName: string,
-      playerPhoto?: string, 
+      playerPhoto?: string,
       teamName: string,
       teamLogo: string,
       type: "Yellow" | "Red",
@@ -124,7 +124,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   useEffect(() => {
     loadData(false);
     // Periodically sync match data for real-time score updates
-    const interval = setInterval(() => loadData(true), 20000); 
+    const interval = setInterval(() => loadData(true), 20000);
     return () => clearInterval(interval);
   }, [authToken]);
 
@@ -186,8 +186,8 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     if (!isSync) setLoading(true);
     setError(null);
     try {
-      const headers: Record<string, string> = (authToken && authToken.trim() !== "") 
-        ? { Authorization: `Bearer ${authToken}` } 
+      const headers: Record<string, string> = (authToken && authToken.trim() !== "")
+        ? { Authorization: `Bearer ${authToken}` }
         : {};
       const [standingsRes, matchesRes, statsRes] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_URL || ""}/api/standings`, { headers }),
@@ -229,15 +229,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   const formatMatchDateTime = (dateString: string) => {
     const date = new Date(dateString);
     return {
-      date: date.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric' 
+      date: date.toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
       }),
-      time: date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
+      time: date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
         minute: '2-digit',
-        hour12: true 
+        hour12: true
       })
     };
   };
@@ -284,7 +284,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
     return (
       <div className="space-y-6 animate-fade-in">
         {/* Back Navigation */}
-        <button 
+        <button
           onClick={() => setSelectedMatch(null)}
           className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#0a3d0a] transition-colors uppercase tracking-widest bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm"
         >
@@ -295,7 +295,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-200 overflow-hidden">
           <div className="green-mesh p-8 sm:p-12 text-white relative">
             {onEditMatch && (
-              <button 
+              <button
                 onClick={() => onEditMatch(selectedMatch)}
                 className="absolute top-6 right-6 bg-white/20 hover:bg-white/30 backdrop-blur-md text-white p-3 rounded-2xl border border-white/20 transition-all z-20 group"
                 title="Edit Fixture"
@@ -306,14 +306,14 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
             <div className="relative z-10 flex flex-col items-center gap-8">
               <div className="flex items-center justify-between w-full max-w-4xl gap-4 sm:gap-12">
                 <div className="flex-1 flex flex-col items-center text-center gap-4">
-                  <img 
-                    src={selectedMatch.homeTeamLogo} 
-                    className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-[#FFD700] bg-white object-cover shadow-xl" 
+                  <img
+                    src={selectedMatch.homeTeamLogo}
+                    className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-[#FFD700] bg-white object-cover shadow-xl"
                     alt="home"
                   />
                   <h2 className="font-bebas text-2xl sm:text-4xl tracking-wide uppercase">{selectedMatch.homeTeamName}</h2>
                 </div>
-                
+
                 <div className="flex flex-col items-center gap-4">
                   <div className="text-5xl sm:text-8xl font-black flex gap-4 drop-shadow-lg">
                     <span>{selectedMatch.homeScore ?? 0}</span>
@@ -329,9 +329,9 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                 </div>
 
                 <div className="flex-1 flex flex-col items-center text-center gap-4">
-                  <img 
-                    src={selectedMatch.awayTeamLogo} 
-                    className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-[#FFD700] bg-white object-cover shadow-xl" 
+                  <img
+                    src={selectedMatch.awayTeamLogo}
+                    className="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-4 border-[#FFD700] bg-white object-cover shadow-xl"
                     alt="away"
                   />
                   <h2 className="font-bebas text-2xl sm:text-4xl tracking-wide uppercase">{selectedMatch.awayTeamName}</h2>
@@ -349,7 +349,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
               </div>
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                
+
                 {/* Left Column: Timeline & Stats */}
                 <div className="lg:col-span-4 space-y-12">
                   {(selectedMatch.goals?.length || 0) + (selectedMatch.cards?.length || 0) > 0 ? (
@@ -409,14 +409,14 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                   </div>
 
                   <div className="flex bg-slate-100 p-1 rounded-2xl">
-                    <button 
-                      onClick={() => setActiveSide("home")} 
+                    <button
+                      onClick={() => setActiveSide("home")}
                       className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase transition-all ${activeSide === "home" ? 'bg-white shadow-md text-[#0a3d0a]' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       {selectedMatch.homeTeamName}
                     </button>
-                    <button 
-                      onClick={() => setActiveSide("away")} 
+                    <button
+                      onClick={() => setActiveSide("away")}
                       className={`flex-1 py-2.5 rounded-xl text-xs font-black uppercase transition-all ${activeSide === "away" ? 'bg-white shadow-md text-[#0a3d0a]' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                       {selectedMatch.awayTeamName}
@@ -426,7 +426,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                   {(() => {
                     const lineup = activeSide === 'home' ? selectedMatch.homeLineup : selectedMatch.awayLineup;
                     return lineup?.starting11?.length ? (
-                      <TacticalPitch 
+                      <TacticalPitch
                         lineup={lineup}
                         allPlayers={activeSide === 'home' ? rosters.home : rosters.away}
                         theme={activeSide === 'home' ? 'emerald' : 'blue'}
@@ -502,6 +502,30 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
   // If fixtures tab is active, prioritize showing fixtures prominently
   if (activeTab === "fixtures" || activeTab === "results") {
     const { grouped, roundOrder } = getGroupedMatches();
+
+    const getWinnerInfo = (match?: Match) => {
+      if (!match || match.status !== "Completed") return null;
+      const hScore = match.homeScore ?? 0;
+      const aScore = match.awayScore ?? 0;
+      if (hScore > aScore) return { name: match.homeTeamName, logo: match.homeTeamLogo };
+      if (aScore > hScore) return { name: match.awayTeamName, logo: match.awayTeamLogo };
+      if (match.homePenaltyScore != null && match.awayPenaltyScore != null) {
+        if (match.homePenaltyScore > match.awayPenaltyScore) return { name: match.homeTeamName, logo: match.homeTeamLogo };
+        if (match.awayPenaltyScore > match.homePenaltyScore) return { name: match.awayTeamName, logo: match.awayTeamLogo };
+      }
+      return { name: "Winner (Pens)", logo: "" };
+    };
+
+    const qfMatches = matches.filter(m => m.stage === "Quarter Final").sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+    const sfMatches = matches.filter(m => m.stage === "Semi Final").sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+
+    const w1 = getWinnerInfo(qfMatches[0]) || { name: "Winner 1", logo: null };
+    const w2 = getWinnerInfo(qfMatches[1]) || { name: "Winner 2", logo: null };
+    const w3 = getWinnerInfo(qfMatches[2]) || { name: "Winner 3", logo: null };
+    const w4 = getWinnerInfo(qfMatches[3]) || { name: "Winner 4", logo: null };
+
+    const sfW1 = getWinnerInfo(sfMatches[0]) || { name: "Winner SF 1", logo: null };
+    const sfW2 = getWinnerInfo(sfMatches[1]) || { name: "Winner SF 2", logo: null };
     return (
       <div className="space-y-6 animate-fade-in">
         {loading && matches.length === 0 ? (
@@ -516,10 +540,10 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
             ))}
           </div>
         ) : error ? (
-           <div className="py-12 text-center text-red-500 bg-red-50 rounded-3xl border border-red-100 px-6">
-             <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-             <p className="text-xs font-bold uppercase tracking-wider">{error}</p>
-           </div>
+          <div className="py-12 text-center text-red-500 bg-red-50 rounded-3xl border border-red-100 px-6">
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+            <p className="text-xs font-bold uppercase tracking-wider">{error}</p>
+          </div>
         ) : (
           <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200/60">
             <h3 className="font-bebas text-xl sm:text-2xl text-[#0a3d0a] tracking-wider uppercase mb-4 sm:mb-6 flex items-center gap-2">
@@ -539,13 +563,13 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                       <Layers className="h-4 w-4 text-[#0a3d0a]" />
                       <h4 className="font-bebas text-lg text-[#0a3d0a] tracking-widest uppercase">{roundName}</h4>
                     </div>
-                    
+
                     <div className="space-y-3 sm:space-y-4">
                       {grouped[roundName].map(match => {
                         const { date, time } = formatMatchDateTime(match.matchDate);
                         return (
                           <div key={match._id} className="relative group">
-                            <div 
+                            <div
                               onClick={() => handleMatchClick(match)}
                               className="border border-slate-200 rounded-xl p-3 sm:p-4 bg-slate-50/50 hover:bg-white transition shadow-sm cursor-pointer hover:border-emerald-300"
                             >
@@ -581,8 +605,8 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                                 <div className={`${match.status === "Live" ? "bg-red-50 text-red-600 border border-red-200" : "bg-emerald-50 text-emerald-700"} px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1.5`}>
                                   <Clock className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${match.status === "Live" ? "animate-pulse" : ""}`} />
                                   <span>
-                                    {match.status === "Live" 
-                                      ? `Match Time: ${getLiveTime(match)}` 
+                                    {match.status === "Live"
+                                      ? `Match Time: ${getLiveTime(match)}`
                                       : match.status === "Completed"
                                         ? "Fulltime"
                                         : `Kick-off: ${time}`}
@@ -609,12 +633,18 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                                 {/* Score / VS */}
                                 <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
                                   {match.status === "Completed" || match.status === "Live" ? (
-                                    <div className={`flex items-center justify-center gap-1 sm:gap-2 font-black text-lg sm:text-2xl px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg ${
-                                      match.status === "Live" ? "text-red-600 bg-red-50 animate-pulse border border-red-200" : "text-[#0a3d0a] bg-emerald-50"
-                                    }`}>
-                                      <span>{match.homeScore ?? 0}</span>
-                                      <span className="text-gray-400 text-base sm:text-xl">-</span>
-                                      <span>{match.awayScore ?? 0}</span>
+                                    <div className="flex flex-col items-center">
+                                      <div className={`flex items-center justify-center gap-1 sm:gap-2 font-black text-lg sm:text-2xl px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg ${match.status === "Live" ? "text-red-600 bg-red-50 animate-pulse border border-red-200" : "text-[#0a3d0a] bg-emerald-50"
+                                        }`}>
+                                        <span>{match.homeScore ?? 0}</span>
+                                        <span className="text-gray-400 text-base sm:text-xl">-</span>
+                                        <span>{match.awayScore ?? 0}</span>
+                                      </div>
+                                      {(match.homePenaltyScore != null && match.awayPenaltyScore != null) && (
+                                        <div className="text-[9px] sm:text-[10px] font-bold text-slate-500 mt-1 uppercase">
+                                          (Pens: {match.homePenaltyScore}-{match.awayPenaltyScore})
+                                        </div>
+                                      )}
                                     </div>
                                   ) : (
                                     <div className="bg-slate-200 text-slate-500 text-[10px] sm:text-xs px-3 sm:px-4 py-1.5 sm:py-2 rounded-full font-bold inline-block">
@@ -656,7 +686,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                             <AlertCircle className="h-4 w-4" />
                             Projected Semi-Finals
                           </div>
-                          
+
                           {/* Projected Match 1 */}
                           <div className="relative group opacity-90 hover:opacity-100 transition-opacity">
                             <div className="border border-purple-200 rounded-xl p-3 sm:p-4 bg-purple-50/50 shadow-sm">
@@ -682,11 +712,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                               <div className="flex items-center justify-between gap-2 sm:gap-4">
                                 <div className="flex-1 text-center">
                                   <div className="flex justify-center mb-1 sm:mb-2">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                                      <span className="text-slate-300 font-black text-lg">?</span>
-                                    </div>
+                                    {w1.logo ? (
+                                      <img src={w1.logo} alt={w1.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm" />
+                                    ) : (
+                                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                        <span className="text-slate-300 font-black text-lg">?</span>
+                                      </div>
+                                    )}
                                   </div>
-                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner 1</span>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{w1.name}</span>
                                 </div>
 
                                 <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
@@ -697,11 +731,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
 
                                 <div className="flex-1 text-center">
                                   <div className="flex justify-center mb-1 sm:mb-2">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                                      <span className="text-slate-300 font-black text-lg">?</span>
-                                    </div>
+                                    {w3.logo ? (
+                                      <img src={w3.logo} alt={w3.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm" />
+                                    ) : (
+                                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                        <span className="text-slate-300 font-black text-lg">?</span>
+                                      </div>
+                                    )}
                                   </div>
-                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner 3</span>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{w3.name}</span>
                                 </div>
                               </div>
                             </div>
@@ -732,11 +770,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                               <div className="flex items-center justify-between gap-2 sm:gap-4">
                                 <div className="flex-1 text-center">
                                   <div className="flex justify-center mb-1 sm:mb-2">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                                      <span className="text-slate-300 font-black text-lg">?</span>
-                                    </div>
+                                    {w2.logo ? (
+                                      <img src={w2.logo} alt={w2.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm" />
+                                    ) : (
+                                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                        <span className="text-slate-300 font-black text-lg">?</span>
+                                      </div>
+                                    )}
                                   </div>
-                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner 2</span>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{w2.name}</span>
                                 </div>
 
                                 <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
@@ -747,11 +789,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
 
                                 <div className="flex-1 text-center">
                                   <div className="flex justify-center mb-1 sm:mb-2">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                                      <span className="text-slate-300 font-black text-lg">?</span>
-                                    </div>
+                                    {w4.logo ? (
+                                      <img src={w4.logo} alt={w4.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm" />
+                                    ) : (
+                                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                        <span className="text-slate-300 font-black text-lg">?</span>
+                                      </div>
+                                    )}
                                   </div>
-                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner 4</span>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{w4.name}</span>
                                 </div>
                               </div>
                             </div>
@@ -764,7 +810,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                             <AlertCircle className="h-4 w-4" />
                             Projected Final
                           </div>
-                          
+
                           {/* Projected Final Match */}
                           <div className="relative group opacity-90 hover:opacity-100 transition-opacity">
                             <div className="border border-red-200 rounded-xl p-3 sm:p-4 bg-red-50/50 shadow-sm">
@@ -790,11 +836,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                               <div className="flex items-center justify-between gap-2 sm:gap-4">
                                 <div className="flex-1 text-center">
                                   <div className="flex justify-center mb-1 sm:mb-2">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                                      <span className="text-slate-300 font-black text-lg">?</span>
-                                    </div>
+                                    {sfW1.logo ? (
+                                      <img src={sfW1.logo} alt={sfW1.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm" />
+                                    ) : (
+                                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                        <span className="text-slate-300 font-black text-lg">?</span>
+                                      </div>
+                                    )}
                                   </div>
-                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner SF 1</span>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{sfW1.name}</span>
                                 </div>
 
                                 <div className="flex-shrink-0 min-w-[60px] sm:min-w-[80px] text-center">
@@ -805,11 +855,15 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
 
                                 <div className="flex-1 text-center">
                                   <div className="flex justify-center mb-1 sm:mb-2">
-                                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
-                                      <span className="text-slate-300 font-black text-lg">?</span>
-                                    </div>
+                                    {sfW2.logo ? (
+                                      <img src={sfW2.logo} alt={sfW2.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white object-cover shadow-sm" />
+                                    ) : (
+                                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-slate-200 bg-white flex items-center justify-center shadow-sm">
+                                        <span className="text-slate-300 font-black text-lg">?</span>
+                                      </div>
+                                    )}
                                   </div>
-                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">Winner SF 2</span>
+                                  <span className="text-[10px] sm:text-xs font-bold text-slate-700 line-clamp-2">{sfW2.name}</span>
                                 </div>
                               </div>
                             </div>
@@ -857,7 +911,7 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200/60 sticky top-24">
               <h3 className="font-bebas text-lg sm:text-xl text-[#0a3d0a] tracking-wider uppercase mb-3 sm:mb-4 flex items-center gap-2">
-                <Calendar className="h-4 w-4 sm:h-5 sm:w-5" /> 
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
                 Upcoming Fixtures
               </h3>
               {matches.filter(m => m.status !== "Completed").length === 0 ? (
@@ -870,91 +924,90 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                     .filter(m => m.status !== "Completed")
                     .slice(0, 10)
                     .map(match => {
-                    const { date, time } = formatMatchDateTime(match.matchDate);
-                    return (
-                      <div 
-                        key={match._id} 
-                        onClick={() => handleMatchClick(match)}
-                        className="border border-slate-200 rounded-xl p-2 sm:p-3 bg-slate-50/50 hover:bg-white transition shadow-sm cursor-pointer hover:border-emerald-300"
-                      >
-                        <div className="flex items-center justify-between text-[8px] sm:text-[9px] font-bold text-gray-500 uppercase mb-2">
-                          <div className="flex items-center gap-1">
-                            <span className="bg-slate-200 text-slate-700 px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[9px]">
-                              {match.stage}
-                            </span>
-                            {match.status === "Live" && (
-                              <span className="bg-red-500 text-white px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[9px] animate-pulse">
-                                LIVE
+                      const { date, time } = formatMatchDateTime(match.matchDate);
+                      return (
+                        <div
+                          key={match._id}
+                          onClick={() => handleMatchClick(match)}
+                          className="border border-slate-200 rounded-xl p-2 sm:p-3 bg-slate-50/50 hover:bg-white transition shadow-sm cursor-pointer hover:border-emerald-300"
+                        >
+                          <div className="flex items-center justify-between text-[8px] sm:text-[9px] font-bold text-gray-500 uppercase mb-2">
+                            <div className="flex items-center gap-1">
+                              <span className="bg-slate-200 text-slate-700 px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[9px]">
+                                {match.stage}
                               </span>
-                            )}
-                          </div>
-                          <div className={`flex items-center gap-1 ${match.status === "Live" ? "text-red-600 font-mono" : ""}`}>
-                            <Clock className={`h-2.5 w-2.5 ${match.status === "Live" ? "animate-pulse" : ""}`} />
-                            <span>{match.status === "Live" ? getLiveTime(match) : time}</span>
-                          </div>
-                        </div>
-                        
-                        {/* Date display */}
-                        <div className="text-center mb-2">
-                          <span className="text-[8px] sm:text-[9px] text-slate-500 font-medium">{date}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between gap-1 sm:gap-2">
-                          <div className="flex flex-col items-center gap-0.5 sm:gap-1 flex-1">
-                            <img 
-                              src={match.homeTeamLogo} 
-                              alt="home" 
-                              className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-slate-200 bg-white object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(match.homeTeamName)}&background=0a3d0a&color=fff&rounded=true&size=32`;
-                              }}
-                            />
-                            <span className="text-[8px] sm:text-[10px] font-bold text-center leading-tight truncate max-w-[60px] sm:max-w-[80px]">
-                              {match.homeTeamName}
-                            </span>
-                          </div>
-                          
-                          <div className="flex-shrink-0 text-center">
-                            {match.status === "Completed" || match.status === "Live" ? (
-                              <div className={`flex items-center gap-0.5 sm:gap-1 font-black text-xs sm:text-sm ${
-                                match.status === "Live" ? "text-red-600 animate-pulse" : "text-[#0a3d0a]"
-                              }`}>
-                                <span>{match.homeScore ?? 0}</span>
-                                <span className="text-gray-300 text-[10px] sm:text-xs">-</span>
-                                <span>{match.awayScore ?? 0}</span>
-                              </div>
-                            ) : (
-                              <div className="bg-slate-200 text-slate-500 text-[8px] sm:text-[10px] px-1 sm:px-2 py-0.5 sm:py-1 rounded font-bold">VS</div>
-                            )}
+                              {match.status === "Live" && (
+                                <span className="bg-red-500 text-white px-1.5 sm:px-2 py-0.5 rounded text-[8px] sm:text-[9px] animate-pulse">
+                                  LIVE
+                                </span>
+                              )}
+                            </div>
+                            <div className={`flex items-center gap-1 ${match.status === "Live" ? "text-red-600 font-mono" : ""}`}>
+                              <Clock className={`h-2.5 w-2.5 ${match.status === "Live" ? "animate-pulse" : ""}`} />
+                              <span>{match.status === "Live" ? getLiveTime(match) : time}</span>
+                            </div>
                           </div>
 
-                          <div className="flex flex-col items-center gap-0.5 sm:gap-1 flex-1">
-                            <img 
-                              src={match.awayTeamLogo} 
-                              alt="away" 
-                              className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-slate-200 bg-white object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(match.awayTeamName)}&background=0a3d0a&color=fff&rounded=true&size=32`;
-                              }}
-                            />
-                            <span className="text-[8px] sm:text-[10px] font-bold text-center leading-tight truncate max-w-[60px] sm:max-w-[80px]">
-                              {match.awayTeamName}
-                            </span>
+                          {/* Date display */}
+                          <div className="text-center mb-2">
+                            <span className="text-[8px] sm:text-[9px] text-slate-500 font-medium">{date}</span>
                           </div>
-                        </div>
 
-                        {/* Venue for mobile */}
-                        {match.venue && (
-                          <div className="mt-2 pt-1 border-t border-slate-100 flex items-center justify-center gap-1">
-                            <MapPin className="h-2 w-2 text-slate-400" />
-                            <span className="text-[7px] sm:text-[8px] text-slate-400 truncate">{match.venue}</span>
+                          <div className="flex items-center justify-between gap-1 sm:gap-2">
+                            <div className="flex flex-col items-center gap-0.5 sm:gap-1 flex-1">
+                              <img
+                                src={match.homeTeamLogo}
+                                alt="home"
+                                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-slate-200 bg-white object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(match.homeTeamName)}&background=0a3d0a&color=fff&rounded=true&size=32`;
+                                }}
+                              />
+                              <span className="text-[8px] sm:text-[10px] font-bold text-center leading-tight truncate max-w-[60px] sm:max-w-[80px]">
+                                {match.homeTeamName}
+                              </span>
+                            </div>
+
+                            <div className="flex-shrink-0 text-center">
+                              {match.status === "Completed" || match.status === "Live" ? (
+                                <div className={`flex items-center gap-0.5 sm:gap-1 font-black text-xs sm:text-sm ${match.status === "Live" ? "text-red-600 animate-pulse" : "text-[#0a3d0a]"
+                                  }`}>
+                                  <span>{match.homeScore ?? 0}</span>
+                                  <span className="text-gray-300 text-[10px] sm:text-xs">-</span>
+                                  <span>{match.awayScore ?? 0}</span>
+                                </div>
+                              ) : (
+                                <div className="bg-slate-200 text-slate-500 text-[8px] sm:text-[10px] px-1 sm:px-2 py-0.5 sm:py-1 rounded font-bold">VS</div>
+                              )}
+                            </div>
+
+                            <div className="flex flex-col items-center gap-0.5 sm:gap-1 flex-1">
+                              <img
+                                src={match.awayTeamLogo}
+                                alt="away"
+                                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border border-slate-200 bg-white object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(match.awayTeamName)}&background=0a3d0a&color=fff&rounded=true&size=32`;
+                                }}
+                              />
+                              <span className="text-[8px] sm:text-[10px] font-bold text-center leading-tight truncate max-w-[60px] sm:max-w-[80px]">
+                                {match.awayTeamName}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+
+                          {/* Venue for mobile */}
+                          {match.venue && (
+                            <div className="mt-2 pt-1 border-t border-slate-100 flex items-center justify-center gap-1">
+                              <MapPin className="h-2 w-2 text-slate-400" />
+                              <span className="text-[7px] sm:text-[8px] text-slate-400 truncate">{match.venue}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   {matches.filter(m => m.status !== "Completed").length > 10 && (
-                    <button 
+                    <button
                       onClick={() => {
                         const fixturesTab = document.querySelector('button[class*="FIXTURES"]');
                         if (fixturesTab) {
@@ -995,9 +1048,9 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                       <span className={`w-6 h-6 flex items-center justify-center rounded-lg text-[10px] font-black ${i < 3 ? 'bg-amber-100 text-amber-700' : 'bg-slate-200 text-slate-500'}`}>
                         {i + 1}
                       </span>
-                      <img 
-                        src={s.playerPhoto || (s as any).photo || (s as any).photoUrl || s.teamLogo} 
-                        className="w-8 h-8 rounded-full border bg-white object-cover" 
+                      <img
+                        src={s.playerPhoto || (s as any).photo || (s as any).photoUrl || s.teamLogo}
+                        className="w-8 h-8 rounded-full border bg-white object-cover"
                         alt={s.name}
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = s.teamLogo;
@@ -1049,9 +1102,9 @@ export const TournamentHub: React.FC<TournamentHubProps> = ({ authToken, activeT
                       <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
                         <td className="py-4 pl-2">
                           <div className="flex items-center gap-3">
-                            <img 
-                              src={d.playerPhoto || (d as any).photo || (d as any).photoUrl || d.teamLogo} 
-                              className="w-7 h-7 rounded-full border bg-white object-cover" 
+                            <img
+                              src={d.playerPhoto || (d as any).photo || (d as any).photoUrl || d.teamLogo}
+                              className="w-7 h-7 rounded-full border bg-white object-cover"
                               alt={d.playerName}
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = d.teamLogo;

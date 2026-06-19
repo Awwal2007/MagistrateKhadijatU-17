@@ -97,8 +97,9 @@ export const LiveMarquee: React.FC<{ matches: Match[] }> = ({ matches }) => {
               </div>
               <div className="flex items-center gap-3 font-bold text-xs">
                 <span className="uppercase">{m.homeTeamName}</span>
-                <span className="bg-[#FFD700] text-[#0a3d0a] px-2 py-0.5 rounded-md font-black text-sm">
+                <span className="bg-[#FFD700] text-[#0a3d0a] px-2 py-0.5 rounded-md font-black text-sm whitespace-nowrap">
                   {m.homeScore || 0} - {m.awayScore || 0}
+                  {(m.homePenaltyScore != null && m.awayPenaltyScore != null) && ` (P: ${m.homePenaltyScore}-${m.awayPenaltyScore})`}
                 </span>
                 <span className="uppercase">{m.awayTeamName}</span>
               </div>

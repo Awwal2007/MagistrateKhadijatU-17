@@ -64,7 +64,7 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
   }>({ isOpen: false, title: "", message: "", type: "info" });
 
   // Score editing local state: matchId -> { home, away }
-  const [scoreEdits, setScoreEdits] = useState<Record<string, { home: string; away: string }>>({});
+  const [scoreEdits, setScoreEdits] = useState<Record<string, { home: string; away: string; homePens?: string; awayPens?: string }>>({});
   const [savingScore, setSavingScore] = useState<string | null>(null);
 
   // Edit Match Details State
@@ -235,12 +235,14 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
     setSavingScore(match._id);
     const homeScore = edit.home === "" ? null : parseInt(edit.home);
     const awayScore = edit.away === "" ? null : parseInt(edit.away);
+    const homePenaltyScore = edit.homePens ? parseInt(edit.homePens) : null;
+    const awayPenaltyScore = edit.awayPens ? parseInt(edit.awayPens) : null;
     const status = (homeScore !== null && awayScore !== null) ? "Completed" : "Scheduled";
     try {
       const res = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/admin/matches/${match._id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ homeScore, awayScore, status })
+        body: JSON.stringify({ homeScore, awayScore, homePenaltyScore, awayPenaltyScore, status })
       });
       if (!res.ok) throw new Error("Failed to update match");
       setScoreEdits(prev => { const n = { ...prev }; delete n[match._id]; return n; });
@@ -389,6 +391,20 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
     }).sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF);
   };
 
+  // Helper: get winner team info from a completed match (accounts for penalties)
+  const getMatchWinner = (match?: Match): { name: string; logo: string } | null => {
+    if (!match || match.status !== "Completed") return null;
+    const h = match.homeScore ?? 0;
+    const a = match.awayScore ?? 0;
+    if (h > a) return { name: match.homeTeamName, logo: match.homeTeamLogo ?? "" };
+    if (a > h) return { name: match.awayTeamName, logo: match.awayTeamLogo ?? "" };
+    if (match.homePenaltyScore != null && match.awayPenaltyScore != null) {
+      if (match.homePenaltyScore > match.awayPenaltyScore) return { name: match.homeTeamName, logo: match.homeTeamLogo ?? "" };
+      if (match.awayPenaltyScore > match.homePenaltyScore) return { name: match.awayTeamName, logo: match.awayTeamLogo ?? "" };
+    }
+    return null;
+  };
+
   const sections = [
     { id: "matches",  label: "Match Board",      icon: Swords },
     { id: "live-scoring", label: "Live Scoring", icon: Zap },
@@ -482,9 +498,19 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                       const isDirty = !!edit;
                       const homeVal = edit ? edit.home : (match.homeScore === null ? "" : String(match.homeScore));
                       const awayVal = edit ? edit.away : (match.awayScore === null ? "" : String(match.awayScore));
+                      const homePensVal = edit?.homePens ?? (match.homePenaltyScore == null ? "" : String(match.homePenaltyScore));
+                      const awayPensVal = edit?.awayPens ?? (match.awayPenaltyScore == null ? "" : String(match.awayPenaltyScore));
                       const isCompleted = match.status === "Completed";
-                      const homeWins = isCompleted && match.homeScore !== null && match.awayScore !== null && match.homeScore > match.awayScore;
-                      const awayWins = isCompleted && match.homeScore !== null && match.awayScore !== null && match.awayScore > match.homeScore;
+                      let homeWins = false;
+                      let awayWins = false;
+                      if (isCompleted && match.homeScore !== null && match.awayScore !== null) {
+                         if (match.homeScore > match.awayScore) homeWins = true;
+                         else if (match.awayScore > match.homeScore) awayWins = true;
+                         else if (match.homePenaltyScore !== null && match.awayPenaltyScore !== null) {
+                            if (match.homePenaltyScore > match.awayPenaltyScore) homeWins = true;
+                            else if (match.awayPenaltyScore > match.homePenaltyScore) awayWins = true;
+                         }
+                      }
                       const { date, time } = formatMatchDateTime(match.matchDate);
 
                       return (
@@ -534,36 +560,71 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
 
                             {/* Score */}
                             <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  placeholder="—"
-                                  value={homeVal}
-                                  readOnly={isCompleted}
-                                  onChange={(e) => setScoreEdits(prev => ({
-                                    ...prev,
-                                    [match._id]: { home: e.target.value, away: prev[match._id]?.away ?? awayVal }
-                                  }))}
-                                  className={`w-12 text-center text-lg font-black py-1.5 border rounded-xl transition ${
-                                    isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : isCompleted ? "border-slate-100 bg-slate-50 cursor-not-allowed opacity-60" : "border-slate-200 bg-white"
-                                  }`}
-                                />
-                                <span className="text-xl font-black text-slate-300">:</span>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  placeholder="—"
-                                  value={awayVal}
-                                  readOnly={isCompleted}
-                                  onChange={(e) => setScoreEdits(prev => ({
-                                    ...prev,
-                                    [match._id]: { home: prev[match._id]?.home ?? homeVal, away: e.target.value }
-                                  }))}
-                                  className={`w-12 text-center text-lg font-black py-1.5 border rounded-xl transition ${
-                                    isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : isCompleted ? "border-slate-100 bg-slate-50 cursor-not-allowed opacity-60" : "border-slate-200 bg-white"
-                                  }`}
-                                />
+                              <div className="flex flex-col gap-1 items-center">
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="—"
+                                    value={homeVal}
+                                    readOnly={isCompleted}
+                                    onChange={(e) => setScoreEdits(prev => ({
+                                      ...prev,
+                                      [match._id]: { ...prev[match._id], home: e.target.value, away: prev[match._id]?.away ?? awayVal }
+                                    }))}
+                                    className={`w-12 text-center text-lg font-black py-1.5 border rounded-xl transition ${
+                                      isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : isCompleted ? "border-slate-100 bg-slate-50 cursor-not-allowed opacity-60" : "border-slate-200 bg-white"
+                                    }`}
+                                  />
+                                  <span className="text-xl font-black text-slate-300">:</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    placeholder="—"
+                                    value={awayVal}
+                                    readOnly={isCompleted}
+                                    onChange={(e) => setScoreEdits(prev => ({
+                                      ...prev,
+                                      [match._id]: { ...prev[match._id], home: prev[match._id]?.home ?? homeVal, away: e.target.value }
+                                    }))}
+                                    className={`w-12 text-center text-lg font-black py-1.5 border rounded-xl transition ${
+                                      isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : isCompleted ? "border-slate-100 bg-slate-50 cursor-not-allowed opacity-60" : "border-slate-200 bg-white"
+                                    }`}
+                                  />
+                                </div>
+                                {stage !== "Group Stage" && (
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      placeholder="P"
+                                      value={homePensVal}
+                                      readOnly={isCompleted}
+                                      onChange={(e) => setScoreEdits(prev => ({
+                                        ...prev,
+                                        [match._id]: { ...prev[match._id], home: prev[match._id]?.home ?? homeVal, away: prev[match._id]?.away ?? awayVal, homePens: e.target.value }
+                                      }))}
+                                      className={`w-8 text-center text-[10px] font-bold py-1 border rounded-lg transition ${
+                                        isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : isCompleted ? "border-slate-100 bg-slate-50 cursor-not-allowed opacity-60" : "border-slate-200 bg-white"
+                                      }`}
+                                    />
+                                    <span className="text-[10px] font-bold text-slate-400">PEN</span>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      placeholder="P"
+                                      value={awayPensVal}
+                                      readOnly={isCompleted}
+                                      onChange={(e) => setScoreEdits(prev => ({
+                                        ...prev,
+                                        [match._id]: { ...prev[match._id], home: prev[match._id]?.home ?? homeVal, away: prev[match._id]?.away ?? awayVal, awayPens: e.target.value }
+                                      }))}
+                                      className={`w-8 text-center text-[10px] font-bold py-1 border rounded-lg transition ${
+                                        isDirty ? "border-[#0a3d0a] bg-green-50 ring-1 ring-[#0a3d0a]" : isCompleted ? "border-slate-100 bg-slate-50 cursor-not-allowed opacity-60" : "border-slate-200 bg-white"
+                                      }`}
+                                    />
+                                  </div>
+                                )}
                               </div>
                               {isDirty && (
                                 <button
@@ -645,147 +706,155 @@ export const TournamentManager: React.FC<TournamentManagerProps> = ({ teams, aut
                       );
                     })}
                   </div>
-                  {stage === "Quarter Final" && (
-                    <div className="border-t border-purple-200 bg-purple-50/20 divide-y divide-purple-100">
-                      <div className="px-6 py-2 bg-purple-100/50 flex items-center gap-2 text-xs font-bold text-purple-800 uppercase tracking-wider">
-                        <AlertCircle className="h-4 w-4" />
-                        Projected Semi-Finals
+                  {stage === "Quarter Final" && (() => {
+                    const qfMatches = stageMatches.sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+                    const w1 = getMatchWinner(qfMatches[0]);
+                    const w2 = getMatchWinner(qfMatches[1]);
+                    const w3 = getMatchWinner(qfMatches[2]);
+                    const w4 = getMatchWinner(qfMatches[3]);
+
+                    const renderProjectedTeam = (winner: { name: string; logo: string } | null, fallback: string) => (
+                      <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                        {winner?.logo ? (
+                          <img
+                            src={winner.logo}
+                            alt={winner.name}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-emerald-400 shadow-xs"
+                            onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=60&q=80"; }}
+                          />
+                        ) : (
+                          <div className={`w-10 h-10 rounded-full border-2 shadow-xs flex items-center justify-center ${winner ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-slate-100"}`}>
+                            <span className={`font-bold text-lg ${winner ? "text-emerald-600" : "text-slate-400"}`}>{winner ? "✓" : "?"}</span>
+                          </div>
+                        )}
+                        <span className={`text-[11px] font-extrabold text-center uppercase leading-tight line-clamp-2 max-w-[90px] ${winner ? "text-emerald-700" : "text-slate-400"}`}>
+                          {winner ? winner.name : fallback}
+                        </span>
+                        {winner && <span className="text-[9px] text-emerald-600 font-bold uppercase">Qualified ✓</span>}
                       </div>
-                      
-                      {/* Projected Semi Final 1 */}
-                      <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:bg-purple-50/50">
-                        <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-700">
-                                Semi Final
-                              </span>
-                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-slate-50 text-slate-500 border-slate-200">
-                                <Clock className="h-2.5 w-2.5" /> TBD
-                              </span>
-                            </div>
-                          </div>
+                    );
+
+                    return (
+                      <div className="border-t border-purple-200 bg-purple-50/20 divide-y divide-purple-100">
+                        <div className="px-6 py-2 bg-purple-100/50 flex items-center gap-2 text-xs font-bold text-purple-800 uppercase tracking-wider">
+                          <AlertCircle className="h-4 w-4" />
+                          Projected Semi-Finals
                         </div>
 
-                        <div className="flex-1 flex items-center justify-center gap-3">
-                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
-                              <span className="text-slate-400 font-bold text-lg">?</span>
-                            </div>
-                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner 1</span>
-                          </div>
-
-                          <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                            <div className="flex items-center gap-2 opacity-50">
-                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
-                              <span className="text-xl font-black text-slate-300">:</span>
-                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                        {/* Projected Semi Final 1: Winner QF1 vs Winner QF3 */}
+                        <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:bg-purple-50/50">
+                          <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-700">Semi Final 1</span>
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-slate-50 text-slate-500 border-slate-200">
+                                  <Clock className="h-2.5 w-2.5" /> TBD
+                                </span>
+                              </div>
                             </div>
                           </div>
-
-                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
-                              <span className="text-slate-400 font-bold text-lg">?</span>
+                          <div className="flex-1 flex items-center justify-center gap-3">
+                            {renderProjectedTeam(w1, "Winner QF1")}
+                            <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                              <div className="flex items-center gap-2 opacity-50">
+                                <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                                <span className="text-xl font-black text-slate-300">:</span>
+                                <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                              </div>
                             </div>
-                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner 3</span>
+                            {renderProjectedTeam(w3, "Winner QF3")}
                           </div>
+                          <div className="flex items-center gap-2 self-end sm:self-center sm:min-w-[120px]"></div>
                         </div>
 
-                        <div className="flex items-center gap-2 self-end sm:self-center sm:min-w-[120px]"></div>
+                        {/* Projected Semi Final 2: Winner QF2 vs Winner QF4 */}
+                        <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:bg-purple-50/50">
+                          <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-700">Semi Final 2</span>
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-slate-50 text-slate-500 border-slate-200">
+                                  <Clock className="h-2.5 w-2.5" /> TBD
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex-1 flex items-center justify-center gap-3">
+                            {renderProjectedTeam(w2, "Winner QF2")}
+                            <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                              <div className="flex items-center gap-2 opacity-50">
+                                <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                                <span className="text-xl font-black text-slate-300">:</span>
+                                <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                              </div>
+                            </div>
+                            {renderProjectedTeam(w4, "Winner QF4")}
+                          </div>
+                          <div className="flex items-center gap-2 self-end sm:self-center sm:min-w-[120px]"></div>
+                        </div>
                       </div>
+                    );
+                  })()}
+                  {(stage === "Semi Final" || (stage === "Quarter Final" && (matchesByStage["Semi Final"]?.length ?? 0) === 0)) && (() => {
+                    const sfSource = stage === "Semi Final" ? stageMatches : [];
+                    const sfSorted = sfSource.sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+                    const sfW1 = getMatchWinner(sfSorted[0]);
+                    const sfW2 = getMatchWinner(sfSorted[1]);
 
-                      {/* Projected Semi Final 2 */}
-                      <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:bg-purple-50/50">
-                        <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-purple-200 bg-purple-50 text-purple-700">
-                                Semi Final
-                              </span>
-                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-slate-50 text-slate-500 border-slate-200">
-                                <Clock className="h-2.5 w-2.5" /> TBD
-                              </span>
-                            </div>
+                    const renderFinalTeam = (winner: { name: string; logo: string } | null, fallback: string) => (
+                      <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                        {winner?.logo ? (
+                          <img
+                            src={winner.logo}
+                            alt={winner.name}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-red-400 shadow-xs"
+                            onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=60&q=80"; }}
+                          />
+                        ) : (
+                          <div className={`w-10 h-10 rounded-full border-2 shadow-xs flex items-center justify-center ${winner ? "border-red-300 bg-red-50" : "border-slate-200 bg-slate-100"}`}>
+                            <span className={`font-bold text-lg ${winner ? "text-red-600" : "text-slate-400"}`}>{winner ? "✓" : "?"}</span>
                           </div>
-                        </div>
-
-                        <div className="flex-1 flex items-center justify-center gap-3">
-                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
-                              <span className="text-slate-400 font-bold text-lg">?</span>
-                            </div>
-                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner 2</span>
-                          </div>
-
-                          <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                            <div className="flex items-center gap-2 opacity-50">
-                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
-                              <span className="text-xl font-black text-slate-300">:</span>
-                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
-                              <span className="text-slate-400 font-bold text-lg">?</span>
-                            </div>
-                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner 4</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 self-end sm:self-center sm:min-w-[120px]"></div>
+                        )}
+                        <span className={`text-[11px] font-extrabold text-center uppercase leading-tight line-clamp-2 max-w-[90px] ${winner ? "text-red-700" : "text-slate-400"}`}>
+                          {winner ? winner.name : fallback}
+                        </span>
+                        {winner && <span className="text-[9px] text-red-600 font-bold uppercase">Finalist ✓</span>}
                       </div>
-                    </div>
-                  )}
-                  {(stage === "Semi Final" || (stage === "Quarter Final" && (matchesByStage["Semi Final"]?.length ?? 0) === 0)) && (
-                    <div className="border-t border-red-200 bg-red-50/20 divide-y divide-red-100">
-                      <div className="px-6 py-2 bg-red-100/50 flex items-center gap-2 text-xs font-bold text-red-800 uppercase tracking-wider">
-                        <AlertCircle className="h-4 w-4" />
-                        Projected Final
-                      </div>
-                      
-                      {/* Projected Final Match */}
-                      <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:bg-red-50/50">
-                        <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
-                          <div className="flex flex-col gap-1.5">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-700">
-                                Final
-                              </span>
-                              <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-slate-50 text-slate-500 border-slate-200">
-                                <Clock className="h-2.5 w-2.5" /> TBD
-                              </span>
-                            </div>
-                          </div>
+                    );
+
+                    return (
+                      <div className="border-t border-red-200 bg-red-50/20 divide-y divide-red-100">
+                        <div className="px-6 py-2 bg-red-100/50 flex items-center gap-2 text-xs font-bold text-red-800 uppercase tracking-wider">
+                          <AlertCircle className="h-4 w-4" />
+                          Projected Final
                         </div>
-
-                        <div className="flex-1 flex items-center justify-center gap-3">
-                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
-                              <span className="text-slate-400 font-bold text-lg">?</span>
-                            </div>
-                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner SF 1</span>
-                          </div>
-
-                          <div className="flex flex-col items-center gap-2 flex-shrink-0">
-                            <div className="flex items-center gap-2 opacity-50">
-                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
-                              <span className="text-xl font-black text-slate-300">:</span>
-                              <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                        <div className="px-5 py-4 flex flex-col sm:flex-row items-center gap-4 transition-colors hover:bg-red-50/50">
+                          <div className="flex items-center gap-2 self-start sm:self-center w-full sm:w-auto sm:min-w-[180px]">
+                            <div className="flex flex-col gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border border-red-200 bg-red-50 text-red-700">The Final</span>
+                                <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 bg-slate-50 text-slate-500 border-slate-200">
+                                  <Clock className="h-2.5 w-2.5" /> TBD
+                                </span>
+                              </div>
                             </div>
                           </div>
-
-                          <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                            <div className="w-10 h-10 rounded-full border-2 border-slate-200 bg-slate-100 shadow-xs flex items-center justify-center">
-                              <span className="text-slate-400 font-bold text-lg">?</span>
+                          <div className="flex-1 flex items-center justify-center gap-3">
+                            {renderFinalTeam(sfW1, "Winner SF 1")}
+                            <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                              <div className="flex items-center gap-2 opacity-50">
+                                <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                                <span className="text-xl font-black text-slate-300">:</span>
+                                <div className="w-12 text-center text-lg font-black py-1.5 border border-slate-200 bg-white rounded-xl text-slate-400">—</div>
+                              </div>
                             </div>
-                            <span className="text-[11px] font-extrabold text-slate-800 text-center uppercase leading-tight line-clamp-2 max-w-[90px]">Winner SF 2</span>
+                            {renderFinalTeam(sfW2, "Winner SF 2")}
                           </div>
+                          <div className="flex items-center gap-2 self-end sm:self-center sm:min-w-[120px]"></div>
                         </div>
-
-                        <div className="flex items-center gap-2 self-end sm:self-center sm:min-w-[120px]"></div>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
               );
             })

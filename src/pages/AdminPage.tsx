@@ -734,7 +734,12 @@ export const AdminPage: React.FC = () => {
                               {match.status === "Live" ? <Clock className="h-4 w-4 animate-pulse" /> : <Trophy className="h-4 w-4" />}
                             </div>
                             <div>
-                              <p className="text-[10px] font-black uppercase text-slate-800">{match.homeTeamName} {match.homeScore}-{match.awayScore} {match.awayTeamName}</p>
+                              <p className="text-[10px] font-black uppercase text-slate-800">
+                                {match.homeTeamName} {match.homeScore}-{match.awayScore} {match.awayTeamName}
+                                {(match.homePenaltyScore != null && match.awayPenaltyScore != null) && (
+                                  <span className="text-slate-500 ml-1">(P: {match.homePenaltyScore}-{match.awayPenaltyScore})</span>
+                                )}
+                              </p>
                               <p className="text-[8px] font-bold text-slate-400 uppercase">{match.stage} • {match.status}</p>
                             </div>
                           </div>
